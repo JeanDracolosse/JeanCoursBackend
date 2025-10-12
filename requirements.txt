@@ -1,0 +1,6 @@
+garmin-fit-sdk==21.178.0
+garminconnect==0.2.30
+dotenv==0.9.9
+pymongo==4.15.3
+fastapi==0.119.0
+uvicorn==0.37.0
