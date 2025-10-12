@@ -1,7 +1,6 @@
 from fastapi import FastAPI
-
+from activity import update_fit
 from mongo import get_distance, get_hr_time_in_zone, get_indexes
-
 app = FastAPI()
 
 
@@ -18,6 +17,11 @@ async def root():
 @app.get("/index")
 async def root():
     return get_indexes()
+
+
+@app.post("/garmin")
+async def root():
+    return update_fit()
 
 if __name__ == "__main__":
     import uvicorn
