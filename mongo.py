@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 from datetime import date, datetime
 
-from aggregation import DISTANCE_PIPELINE, HR_TIME_IN_ZONE_PIPELINE, INDEX_PIPELINE
+from aggregation import DISTANCE_PIPELINE, HR_TIME_IN_ZONE_PIPELINE, INDEX_PIPELINE, POWER_TIME_IN_ZONE_PIPELINE
 
 load_dotenv()
 
@@ -66,6 +66,8 @@ def get_indexes() -> None:
 def get_hr_time_in_zone() -> None:
     return __aggregate_activities_pipeline(HR_TIME_IN_ZONE_PIPELINE)[0]
 
+def get_power_time_in_zone() -> None:
+    return __aggregate_activities_pipeline(POWER_TIME_IN_ZONE_PIPELINE)[0]
 
 def get_distance() -> None:
     return __aggregate_activities_pipeline(DISTANCE_PIPELINE)[0]

@@ -119,6 +119,90 @@ HR_TIME_IN_ZONE_PIPELINE = [
     },
 ]
 
+POWER_TIME_IN_ZONE_PIPELINE = [
+    {
+        "$match": {
+            "activityType.typeId": 1
+        }
+    },
+    {
+        "$project": {
+            "year": {
+                "$isoWeekYear": "$startTimeLocal"
+            },
+            "week": {
+                "$isoWeek": "$startTimeLocal"
+            },
+            "powerTimeInZone_1": 1,
+            "powerTimeInZone_2": 1,
+            "powerTimeInZone_3": 1,
+            "powerTimeInZone_4": 1,
+            "powerTimeInZone_5": 1,
+        }
+    },
+    {
+        "$group": {
+            "_id": {
+                "$concat": [
+                    {
+                        "$toString": "$year"
+                    },
+                    "_",
+                    {
+                        "$toString": "$week"
+                    }
+                ]
+            },
+            "powerTimeInZone_1": {
+                "$sum": "$powerTimeInZone_1"
+            },
+            "powerTimeInZone_2": {
+                "$sum": "$powerTimeInZone_2"
+            },
+            "powerTimeInZone_3": {
+                "$sum": "$powerTimeInZone_3"
+            },
+            "powerTimeInZone_4": {
+                "$sum": "$powerTimeInZone_4"
+            },
+            "powerTimeInZone_5": {
+                "$sum": "$powerTimeInZone_5"
+            }
+        }
+    },
+    {
+        "$sort":
+            {
+                "_id": 1
+            }
+    },
+    {
+        "$group": {
+            "_id": None,
+            "powerTimeInZone_1": {
+                "$push": "$powerTimeInZone_1"
+            },
+            "powerTimeInZone_2": {
+                "$push": "$powerTimeInZone_2"
+            },
+            "powerTimeInZone_3": {
+                "$push": "$powerTimeInZone_3"
+            },
+            "powerTimeInZone_4": {
+                "$push": "$powerTimeInZone_4"
+            },
+            "powerTimeInZone_5": {
+                "$push": "$powerTimeInZone_5"
+            }
+        }
+    },
+    {
+        "$project": {
+            "_id": 0,
+        }
+    },
+]
+
 DISTANCE_PIPELINE = [
     {
         "$match": {
