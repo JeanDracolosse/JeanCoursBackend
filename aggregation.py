@@ -134,20 +134,40 @@ DISTANCE_PIPELINE = [
                 "$isoWeek": "$startTimeLocal"
             },
             "distance": 1,
-            "elevationGain": 1
+            "elevationGain": 1,
+            "elevationLoss": 1,
+            "fullKilometerEffort": {
+                "$add": [
+                    "$distance",
+                    {
+                        "$multiply": ["$elevationGain", 10]
+                    },
+                    {
+                        "$multiply": ["$elevationLoss", 3]
+                    }
+                ]
+            },
+            "kilometerEffort": {
+                "$add": [
+                    "$distance",
+                    {
+                        "$multiply": ["$elevationGain", 10]
+                    }
+                ]
+            }
         }
     },
     {
         "$group": {
             "_id": {
                 "$concat": [
-                    {
-                        "$toString": "$year"
-                    },
+                  {
+                      "$toString": "$year"
+                  },
                     "_",
                     {
-                        "$toString": "$week"
-                    }
+                      "$toString": "$week"
+                  }
                 ]
             },
             "distance": {
@@ -155,14 +175,22 @@ DISTANCE_PIPELINE = [
             },
             "elevationGain": {
                 "$sum": "$elevationGain"
+            },
+            "elevationLoss": {
+                "$sum": "$elevationLoss"
+            },
+            "kilometerEffort": {
+                "$sum": "$kilometerEffort"
+            },
+            "fullKilometerEffort": {
+                "$sum": "$fullKilometerEffort"
             }
         }
     },
     {
-        "$sort":
-            {
-                "_id": 1
-            }
+        "$sort": {
+            "_id": 1
+        }
     },
     {
         "$group": {
@@ -172,12 +200,16 @@ DISTANCE_PIPELINE = [
             },
             "elevationGain": {
                 "$push": "$elevationGain"
+            },
+            "elevationLoss": {
+                "$push": "$elevationLoss"
+            },
+            "kilometerEffort": {
+                "$push": "$kilometerEffort"
+            },
+            "fullKilometerEffort": {
+                "$push": "$fullKilometerEffort"
             }
         }
-    },
-    {
-        "$project": {
-            "_id": 0,
-        }
-    },
+    }
 ]

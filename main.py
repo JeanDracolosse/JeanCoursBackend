@@ -19,7 +19,7 @@ async def root():
     return get_indexes()
 
 
-@app.post("/garmin")
+@app.get("/garmin")
 async def root():
     return update_fit()
 
