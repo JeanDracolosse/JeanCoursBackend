@@ -85,5 +85,7 @@ def get_metric_list_by_week(metric_list: list) -> None:
 
 
 def get_metric_list_by_activity(year: int, week: int, metric_list: list) -> None:
-    return __aggregate_activities_pipeline(get_cumulative_metric_list_pipeline_by_activity(year, week, metric_list))[0]
+    if "startTimeLocal" not in metric_list:
+        metric_list.append("startTimeLocal")
+    return __aggregate_activities_pipeline(get_cumulative_metric_list_pipeline_by_activity(year, week, metric_list))
 

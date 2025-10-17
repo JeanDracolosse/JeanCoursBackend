@@ -371,22 +371,15 @@ def get_cumulative_metric_list_pipeline_by_activity(year: int, week: int, metric
             "week": week,
         }
         },
+        {"$sort": {
+            "startTimeLocal": 1
+        }
+        },
         {"$group": {
-            "_id": {"$concat": [
-                {"$toString": "$year"
-                 },
-                "_",
-                {"$toString": "$week"
-                 }
-            ]
-            },
+            "_id": None,
             **{metric: {
                 "$push": f"${metric}"
             } for metric in metric_list}
-        }
-        },
-        {"$sort": {
-            "_id": 1
         }
         }
     ]
