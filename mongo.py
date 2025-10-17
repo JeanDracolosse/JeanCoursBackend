@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 from datetime import date, datetime
 
-from aggregation import DISTANCE_PIPELINE, HR_TIME_IN_ZONE_PIPELINE, INDEX_PIPELINE, POWER_TIME_IN_ZONE_PIPELINE
+from aggregation import DISTANCE_PIPELINE, HR_TIME_IN_ZONE_PIPELINE, INDEX_PIPELINE, POWER_TIME_IN_ZONE_PIPELINE, get_cumulative_metric_list_pipeline_by_week, get_cumulative_metric_list_pipeline_by_activity
 
 load_dotenv()
 
@@ -66,8 +66,10 @@ def get_indexes() -> None:
 def get_hr_time_in_zone() -> None:
     return __aggregate_activities_pipeline(HR_TIME_IN_ZONE_PIPELINE)[0]
 
+
 def get_power_time_in_zone() -> None:
     return __aggregate_activities_pipeline(POWER_TIME_IN_ZONE_PIPELINE)[0]
+
 
 def get_distance() -> None:
     return __aggregate_activities_pipeline(DISTANCE_PIPELINE)[0]
@@ -76,3 +78,12 @@ def get_distance() -> None:
 def __aggregate_activities_pipeline(pipeline: dict) -> dict:
     cursor = activities_collection.aggregate(pipeline)
     return [data for data in cursor]
+
+
+def get_metric_list_by_week(metric_list: list) -> None:
+    return __aggregate_activities_pipeline(get_cumulative_metric_list_pipeline_by_week(metric_list))[0]
+
+
+def get_metric_list_by_activity(year: int, week: int, metric_list: list) -> None:
+    return __aggregate_activities_pipeline(get_cumulative_metric_list_pipeline_by_activity(year, week, metric_list))[0]
+

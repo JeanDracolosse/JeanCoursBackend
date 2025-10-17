@@ -297,3 +297,96 @@ DISTANCE_PIPELINE = [
         }
     }
 ]
+
+
+def get_cumulative_metric_list_pipeline_by_week(metric_list: list) -> list[dict]:
+    return [
+        {
+            "$match": {
+                "activityType.typeId": 1
+            }
+        },
+        {
+            "$project": {
+                "year": {
+                    "$isoWeekYear": "$startTimeLocal"
+                },
+                "week": {
+                    "$isoWeek": "$startTimeLocal"
+                },
+
+                **{metric: 1 for metric in metric_list}
+            }
+        },
+        {
+            "$group": {
+                "_id": {
+                    "$concat": [
+                        {
+                            "$toString": "$year"
+                        },
+                        "_",
+                        {
+                            "$toString": "$week"
+                        }
+                    ]
+                },
+                **{metric: {
+                    "$sum": f"${metric}"
+                } for metric in metric_list}
+            }
+        },
+        {
+            "$sort": {
+                "_id": 1
+            }
+        },
+        {
+            "$group": {
+                "_id": None,
+                **{metric: {
+                    "$push": f"${metric}"
+                } for metric in metric_list}
+            }
+        }
+    ]
+
+
+def get_cumulative_metric_list_pipeline_by_activity(year: int, week: int, metric_list: list) -> list[dict]:
+    return [
+        {"$match": {
+            "activityType.typeId": 1
+        }
+        },
+        {"$project": {
+            "year": {"$isoWeekYear": "$startTimeLocal"
+                     },
+            "week": {"$isoWeek": "$startTimeLocal"
+                     },
+            **{metric: 1 for metric in metric_list}
+        }
+        },
+        {"$match": {
+            "year": year,
+            "week": week,
+        }
+        },
+        {"$group": {
+            "_id": {"$concat": [
+                {"$toString": "$year"
+                 },
+                "_",
+                {"$toString": "$week"
+                 }
+            ]
+            },
+            **{metric: {
+                "$push": f"${metric}"
+            } for metric in metric_list}
+        }
+        },
+        {"$sort": {
+            "_id": 1
+        }
+        }
+    ]
