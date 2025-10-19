@@ -1,7 +1,7 @@
 INDEX_PIPELINE = [
     {
         "$match": {
-            "activityType.typeId": 1
+            "activityType.typeId": {"$in": [1, 6]}
         }
     },
     {
@@ -38,7 +38,7 @@ INDEX_PIPELINE = [
 HR_TIME_IN_ZONE_PIPELINE = [
     {
         "$match": {
-            "activityType.typeId": 1
+            "activityType.typeId": {"$in": [1, 6]}
         }
     },
     {
@@ -122,7 +122,7 @@ HR_TIME_IN_ZONE_PIPELINE = [
 POWER_TIME_IN_ZONE_PIPELINE = [
     {
         "$match": {
-            "activityType.typeId": 1
+            "activityType.typeId": {"$in": [1, 6]}
         }
     },
     {
@@ -206,7 +206,7 @@ POWER_TIME_IN_ZONE_PIPELINE = [
 DISTANCE_PIPELINE = [
     {
         "$match": {
-            "activityType.typeId": 1
+            "activityType.typeId": {"$in": [1, 6]}
         }
     },
     {
@@ -303,7 +303,7 @@ def get_cumulative_metric_list_pipeline_by_week(metric_list: list) -> list[dict]
     return [
         {
             "$match": {
-                "activityType.typeId": 1
+            "activityType.typeId": {"$in": [1, 6]}
             }
         },
         {
@@ -355,7 +355,7 @@ def get_cumulative_metric_list_pipeline_by_week(metric_list: list) -> list[dict]
 def get_cumulative_metric_list_pipeline_by_activity(year: int, week: int, metric_list: list) -> list[dict]:
     return [
         {"$match": {
-            "activityType.typeId": 1
+            "activityType.typeId": {"$in": [1, 6]}
         }
         },
         {"$project": {

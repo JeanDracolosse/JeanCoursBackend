@@ -10,3 +10,6 @@ def update_fit() -> None:
         fit_activity = download_fit_from_id(activity['activityId'])
         upsert_activity(fit_activity)
     set_last_date()
+
+if __name__ == "__main__":
+    update_fit()
