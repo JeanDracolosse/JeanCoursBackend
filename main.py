@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 from fastapi import FastAPI, Query
 from activity import update_fit
-from mongo import get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_metric_list_by_week, get_power_time_in_zone
+from mongo import get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_cumulative_metric_list_by_week, get_average_metric_list_by_week, get_power_time_in_zone
 app = FastAPI()
 
 
@@ -25,10 +25,17 @@ async def root():
     return get_indexes()
 
 
-@app.get("/metricsByWeek")
+@app.get("/metricsAvgByWeek")
 async def get_metrics(metrics: Annotated[list, Query()]):
     if metrics:
-        return get_metric_list_by_week(metrics)
+        return get_average_metric_list_by_week(metrics)
+    return []
+
+
+@app.get("/metricsSumByWeek")
+async def get_metrics(metrics: Annotated[list, Query()]):
+    if metrics:
+        return get_cumulative_metric_list_by_week(metrics)
     return []
 
 

@@ -299,7 +299,7 @@ DISTANCE_PIPELINE = [
 ]
 
 
-def get_cumulative_metric_list_pipeline_by_week(metric_list: list) -> list[dict]:
+def get_metric_list_pipeline_by_week(metric_list: list, aggregation: str) -> list[dict]:
     return [
         {
             "$match": {
@@ -332,7 +332,7 @@ def get_cumulative_metric_list_pipeline_by_week(metric_list: list) -> list[dict]
                     ]
                 },
                 **{metric: {
-                    "$sum": f"${metric}"
+                    f"${aggregation}": f"${metric}"
                 } for metric in metric_list}
             }
         },
@@ -352,7 +352,7 @@ def get_cumulative_metric_list_pipeline_by_week(metric_list: list) -> list[dict]
     ]
 
 
-def get_cumulative_metric_list_pipeline_by_activity(year: int, week: int, metric_list: list) -> list[dict]:
+def get_metric_list_pipeline_by_activity(year: int, week: int, metric_list: list) -> list[dict]:
     return [
         {"$match": {
             "activityType.typeId": {"$in": [1, 6]}
