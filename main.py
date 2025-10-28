@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 from fastapi import FastAPI, Query
 from activity import update_fit
-from mongo import get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_cumulative_metric_list_by_week, get_average_metric_list_by_week, get_power_time_in_zone
+from mongo import get_week_types, get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_cumulative_metric_list_by_week, get_average_metric_list_by_week, get_power_time_in_zone
 app = FastAPI()
 
 
@@ -44,6 +44,11 @@ async def get_metrics(year: Annotated[int, Query()], week: Annotated[int, Query(
     if year and week and metrics:
         return get_metric_list_by_activity(year, week, metrics)
     return []
+
+
+@app.get("/weekTypes")
+async def get_week_types_data():
+    return get_week_types()
 
 
 @app.get("/garmin")

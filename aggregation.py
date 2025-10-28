@@ -303,7 +303,7 @@ def get_metric_list_pipeline_by_week(metric_list: list, aggregation: str) -> lis
     return [
         {
             "$match": {
-            "activityType.typeId": {"$in": [1, 6]}
+                "activityType.typeId": {"$in": [1, 6]}
             }
         },
         {
@@ -382,4 +382,29 @@ def get_metric_list_pipeline_by_activity(year: int, week: int, metric_list: list
             } for metric in metric_list}
         }
         }
+    ]
+
+
+def get_week_types_pipeline() -> list[dict]:
+    return [
+        {"$lookup":
+         {
+             "from": "weekTypes",
+             "localField": "weekTypeId",
+             "foreignField": "weekTypeId",
+             "as": "label"
+         }
+         },
+        {"$unwind":
+         {
+             "path": "$label"
+         }
+         },
+        {"$project":
+         {
+             "_id": 0,
+             "date": 1,
+             "label": "$label.label"
+         }
+         }
     ]

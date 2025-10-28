@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 from datetime import date, datetime
 
-from aggregation import DISTANCE_PIPELINE, HR_TIME_IN_ZONE_PIPELINE, INDEX_PIPELINE, POWER_TIME_IN_ZONE_PIPELINE, get_metric_list_pipeline_by_week, get_metric_list_pipeline_by_week, get_metric_list_pipeline_by_activity
+from aggregation import DISTANCE_PIPELINE, HR_TIME_IN_ZONE_PIPELINE, INDEX_PIPELINE, POWER_TIME_IN_ZONE_PIPELINE, get_metric_list_pipeline_by_week, get_metric_list_pipeline_by_week, get_metric_list_pipeline_by_activity, get_week_types_pipeline
 
 load_dotenv()
 
@@ -32,11 +32,21 @@ def __get_or_create_collection(collection_name: str, index_list: list[str] = [])
 activities_collection = __get_or_create_collection(
     "activities", ["activityId"])
 configuration_collection = __get_or_create_collection("configuration")
+week_type_collection = __get_or_create_collection("weekTypes", ["weekTypeId"])
+week_collection = __get_or_create_collection("weeks", ["date"])
 
 
 def upsert_activity(activity: dict) -> None:
     activities_collection.update_one({"activityId": activity['activityId']}, {
                                      "$set": activity}, upsert=True)
+    
+def upsert_week_type(week_type: dict) -> None:
+    week_type_collection.update_one({"weekTypeId": week_type['weekTypeId']}, {
+                                     "$set": week_type}, upsert=True)   
+
+def upsert_week(week: dict) -> None:
+    week_collection.update_one({"date": week['date']}, {
+                                     "$set": week}, upsert=True)   
 
 # Data operations
 
@@ -92,3 +102,7 @@ def get_metric_list_by_activity(year: int, week: int, metric_list: list) -> None
     if "startTimeLocal" not in metric_list:
         metric_list.append("startTimeLocal")
     return __aggregate_activities_pipeline(get_metric_list_pipeline_by_activity(year, week, metric_list))[0]
+
+def get_week_types() -> dict:
+    cursor = week_collection.aggregate(get_week_types_pipeline())
+    return [data for data in cursor]
