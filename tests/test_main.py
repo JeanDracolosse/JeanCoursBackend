@@ -58,7 +58,7 @@ def whenGetMetricsSumByWeekRoute_thenSumsEveryRequestedMetric(client, two_weeks_
 
     # Then
     assert response.status_code == 200
-    assert response.json() == {"_id": None, "distance": [15000, 8000], "elevationGain": [100, 20]}
+    assert response.json() == {"distance": [15000, 8000], "elevationGain": [100, 20]}
 
 
 def whenGetMetricsAvgByWeekRoute_thenAveragesEveryRequestedMetric(client, two_weeks_of_runs):
@@ -68,7 +68,7 @@ def whenGetMetricsAvgByWeekRoute_thenAveragesEveryRequestedMetric(client, two_we
 
     # Then
     assert response.status_code == 200
-    assert response.json() == {"_id": None, "averageHR": [145, 160]}
+    assert response.json() == {"averageHR": [145, 160]}
 
 
 def whenGetMetricsAvgByWeekRoute_thenRejectsRequestWithoutMetrics(client):
@@ -88,7 +88,6 @@ def whenGetMetricsByActivityRoute_thenReturnsRunsOfThatWeek(client, two_weeks_of
     # Then
     assert response.status_code == 200
     assert response.json() == {
-        "_id": None,
         "distance": [10000, 5000],
         "startTimeLocal": ["2025-03-03T08:00:00", "2025-03-05T18:00:00"],
     }
@@ -114,14 +113,35 @@ def whenGetDistanceRoute_thenReturnsEmptyArraysWithoutRuns(client):
     assert response.json()["distance"] == []
 
 
-def whenGetMetricsByActivityRoute_thenReturnsEmptyListWithoutMetrics(client, two_weeks_of_runs):
+def whenGetMetricsByActivityRoute_thenRejectsRequestWithoutMetrics(client):
     # Given
     # When
     response = client.get("/metricsByActivity", params={"year": 2025, "week": 10})
 
     # Then
+    assert response.status_code == 422
+
+
+def whenGetMetricsByActivityRoute_thenRejectsRequestWithoutWeek(client):
+    # Given
+    # When
+    response = client.get("/metricsByActivity", params={"year": 2025, "metrics": ["distance"]})
+
+    # Then
+    assert response.status_code == 422
+
+
+def whenGetOpenApi_thenDocumentsEveryRouteWithSchemas(client):
+    # Given
+    # When
+    response = client.get("/openapi.json")
+
+    # Then
     assert response.status_code == 200
-    assert response.json() == []
+    spec = response.json()
+    assert set(spec["paths"]) == {"/index", "/distance", "/hrTimeInZone", "/powerTimeInZone", "/metricsSumByWeek",
+                                  "/metricsAvgByWeek", "/metricsByActivity", "/weekTypes", "/garmin"}
+    assert "DistanceWeeks" in spec["components"]["schemas"]
 
 
 def whenGetWeekTypesRoute_thenReturnsWeeksWithLabels(client):

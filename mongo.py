@@ -97,6 +97,7 @@ def __aggregate_arrays(pipeline: list[dict]) -> dict:
     """
     results = __aggregate_activities_pipeline(pipeline)
     if results:
+        results[0].pop("_id", None)
         return results[0]
     last_group = next(stage["$group"] for stage in reversed(pipeline) if "$group" in stage)
     return {field: [] for field in last_group if field != "_id"}

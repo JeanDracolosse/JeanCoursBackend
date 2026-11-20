@@ -1,63 +1,87 @@
-from typing import Annotated, Optional
+from datetime import datetime
+from typing import Annotated
+
 from fastapi import FastAPI, HTTPException, Query
+
 from activity import update_fit
 from garmin import GarminLoginRequired
 from mongo import get_week_types, get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_cumulative_metric_list_by_week, get_average_metric_list_by_week, get_power_time_in_zone
-app = FastAPI()
+from schemas import ActivityMetrics, DistanceWeeks, ErrorDetail, HrTimeInZoneWeeks, PowerTimeInZoneWeeks, WeeklyMetrics, WeekType
+
+app = FastAPI(
+    title="Jean Cours API",
+    description="Running stats from Garmin. Weekly arrays share one order: the weeks listed by `/index`.",
+    version="1.0.0",
+)
+
+WEEKLY = "Weekly stats"
+SYNC = "Sync"
+PLANNING = "Planning"
+
+Metrics = Annotated[list[str], Query(
+    description="Garmin activity field names. Repeat the parameter for several.",
+    examples=[["distance", "elevationGain"]],
+)]
 
 
-@app.get("/hrTimeInZone")
-async def root():
-    return get_hr_time_in_zone()
-
-
-@app.get("/powerTimeInZone")
-async def root():
-    return get_power_time_in_zone()
-
-
-@app.get("/distance")
-async def root():
-    return get_distance()
-
-
-@app.get("/index")
-async def root():
+@app.get("/index", tags=[WEEKLY], response_model=list[datetime],
+         summary="Weeks with runs", description="Monday of each ISO week that has at least one run, oldest first.")
+async def index():
     return get_indexes()
 
 
-@app.get("/metricsAvgByWeek")
-async def get_metrics(metrics: Annotated[list, Query()]):
-    if metrics:
-        return get_average_metric_list_by_week(metrics)
-    return []
+@app.get("/distance", tags=[WEEKLY], response_model=DistanceWeeks, summary="Distance and elevation per week")
+async def distance():
+    return get_distance()
 
 
-@app.get("/metricsSumByWeek")
-async def get_metrics(metrics: Annotated[list, Query()]):
-    if metrics:
-        return get_cumulative_metric_list_by_week(metrics)
-    return []
+@app.get("/hrTimeInZone", tags=[WEEKLY], response_model=HrTimeInZoneWeeks, summary="Time in heart rate zones per week")
+async def hr_time_in_zone():
+    return get_hr_time_in_zone()
 
 
-@app.get("/metricsByActivity")
-async def get_metrics(year: Annotated[int, Query()], week: Annotated[int, Query()] = [], metrics: Annotated[list, Query()] = []):
-    if year and week and metrics:
-        return get_metric_list_by_activity(year, week, metrics)
-    return []
+@app.get("/powerTimeInZone", tags=[WEEKLY], response_model=PowerTimeInZoneWeeks, summary="Time in power zones per week")
+async def power_time_in_zone():
+    return get_power_time_in_zone()
 
 
-@app.get("/weekTypes")
-async def get_week_types_data():
+@app.get("/metricsSumByWeek", tags=[WEEKLY], response_model=WeeklyMetrics,
+         summary="Sum of metrics per week", description="One array per requested metric, aligned with `/index`.")
+async def metrics_sum_by_week(metrics: Metrics):
+    return get_cumulative_metric_list_by_week(metrics)
+
+
+@app.get("/metricsAvgByWeek", tags=[WEEKLY], response_model=WeeklyMetrics,
+         summary="Average of metrics per week", description="One array per requested metric, aligned with `/index`. `null` when no run of the week has the field.")
+async def metrics_avg_by_week(metrics: Metrics):
+    return get_average_metric_list_by_week(metrics)
+
+
+@app.get("/metricsByActivity", tags=[WEEKLY], response_model=ActivityMetrics,
+         summary="Metrics of each run in a week",
+         description="One array per requested metric, one value per run, sorted by start time. `startTimeLocal` is always included.")
+async def metrics_by_activity(
+    year: Annotated[int, Query(description="ISO week year.", examples=[2025])],
+    week: Annotated[int, Query(description="ISO week number.", ge=1, le=53, examples=[10])],
+    metrics: Metrics,
+):
+    return get_metric_list_by_activity(year, week, metrics)
+
+
+@app.get("/weekTypes", tags=[PLANNING], response_model=list[WeekType], summary="Planned type of each week")
+async def week_types():
     return get_week_types()
 
 
-@app.get("/garmin")
+@app.get("/garmin", tags=[SYNC], response_model=None, summary="Sync new activities from Garmin",
+         description="Fetches activities since the last sync and stores them.",
+         responses={401: {"model": ErrorDetail, "description": "Garmin needs an MFA code. Run `activity.py` in a terminal."}})
 def sync_garmin():
     try:
-        return update_fit()
+        update_fit()
     except GarminLoginRequired as error:
         raise HTTPException(status_code=401, detail=str(error))
+
 
 if __name__ == "__main__":
     import uvicorn

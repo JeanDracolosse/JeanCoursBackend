@@ -10,7 +10,6 @@ def whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly(two_weeks_of_run
 
     # Then
     assert result == {
-        "_id": None,
         "distance": [15000, 8000],
         "elevationGain": [100, 20],
         "elevationLoss": [50, 20],
@@ -57,7 +56,7 @@ def whenGetCumulativeMetricListByWeek_thenSumsEachMetricPerWeek(two_weeks_of_run
     result = mongo.get_cumulative_metric_list_by_week(metrics)
 
     # Then
-    assert result == {"_id": None, "distance": [15000, 8000], "elevationGain": [100, 20]}
+    assert result == {"distance": [15000, 8000], "elevationGain": [100, 20]}
 
 
 def whenGetAverageMetricListByWeek_thenAveragesEachMetricPerWeek(two_weeks_of_runs):
@@ -68,7 +67,7 @@ def whenGetAverageMetricListByWeek_thenAveragesEachMetricPerWeek(two_weeks_of_ru
     result = mongo.get_average_metric_list_by_week(metrics)
 
     # Then
-    assert result == {"_id": None, "averageHR": [145, 160]}
+    assert result == {"averageHR": [145, 160]}
 
 
 def whenGetMetricListByActivity_thenReturnsRunsOfThatWeekSortedByStartTime(two_weeks_of_runs):
@@ -80,7 +79,6 @@ def whenGetMetricListByActivity_thenReturnsRunsOfThatWeekSortedByStartTime(two_w
 
     # Then
     assert result == {
-        "_id": None,
         "distance": [10000, 5000],
         "startTimeLocal": [datetime(2025, 3, 3, 8), datetime(2025, 3, 5, 18)],
     }
