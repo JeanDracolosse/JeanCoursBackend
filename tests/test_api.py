@@ -1,9 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
-import main
-import mongo
-from garmin import GarminLoginRequired
+from jean_cours import db
+from jean_cours.api import app as main
 
 
 @pytest.fixture
@@ -162,7 +161,7 @@ def whenGetMetricsByActivityRoute_thenRejectsRequestWithoutWeek(client):
 
 def whenGetTrainingLoadRoute_thenReturnsWeeklyLoad(client, two_weeks_of_runs):
     # Given
-    mongo.upsert_threshold({"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92})
+    db.upsert_threshold({"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92})
 
     # When
     response = client.get("/trainingLoad")
@@ -175,7 +174,7 @@ def whenGetTrainingLoadRoute_thenReturnsWeeklyLoad(client, two_weeks_of_runs):
 
 def whenGetTrainingLoadByDayRoute_thenReturnsOneValuePerDay(client, two_weeks_of_runs):
     # Given
-    mongo.upsert_threshold({"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92})
+    db.upsert_threshold({"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92})
 
     # When
     response = client.get("/trainingLoadByDay")
@@ -193,7 +192,7 @@ def whenGetTrainingLoadRoute_thenReturns409WithoutThresholds(client, two_weeks_o
 
     # Then
     assert response.status_code == 409
-    assert "setThresholds.py" in response.json()["detail"]
+    assert "set_thresholds.py" in response.json()["detail"]
 
 
 def whenGetOpenApi_thenDocumentsEveryRouteWithSchemas(client):
@@ -205,15 +204,15 @@ def whenGetOpenApi_thenDocumentsEveryRouteWithSchemas(client):
     assert response.status_code == 200
     spec = response.json()
     assert set(spec["paths"]) == {"/index", "/distance", "/hrTimeInZone", "/powerTimeInZone", "/metricsSumByWeek",
-                                  "/metricsAvgByWeek", "/metricsByActivity", "/weekTypes", "/garmin",
+                                  "/metricsAvgByWeek", "/metricsByActivity", "/weekTypes",
                                   "/trainingLoad", "/trainingLoadByDay"}
     assert "DistanceWeeks" in spec["components"]["schemas"]
 
 
 def whenGetWeekTypesRoute_thenReturnsWeeksWithLabels(client):
     # Given
-    mongo.upsert_week_type({"weekTypeId": 2, "label": "Intensive"})
-    mongo.upsert_week({"date": "2025-11-17", "weekTypeId": 2})
+    db.upsert_week_type({"weekTypeId": 2, "label": "Intensive"})
+    db.upsert_week({"date": "2025-11-17", "weekTypeId": 2})
 
     # When
     response = client.get("/weekTypes")
@@ -223,29 +222,10 @@ def whenGetWeekTypesRoute_thenReturnsWeeksWithLabels(client):
     assert response.json() == [{"date": "2025-11-17", "label": "Intensive"}]
 
 
-def whenGetGarminRoute_thenRunsTheSync(client, monkeypatch):
+def whenGetGarminRoute_thenIsNotExposed(client):
     # Given
-    calls = []
-    monkeypatch.setattr(main, "update_fit", lambda: calls.append("sync"))
-
     # When
     response = client.get("/garmin")
 
     # Then
-    assert response.status_code == 200
-    assert calls == ["sync"]
-
-
-def whenGetGarminRoute_thenReturns401WhenLoginNeedsMfa(client, monkeypatch):
-    # Given
-    def sync_needing_mfa():
-        raise GarminLoginRequired("Garmin needs an MFA code. Run in a terminal: .venv/Scripts/python.exe activity.py")
-
-    monkeypatch.setattr(main, "update_fit", sync_needing_mfa)
-
-    # When
-    response = client.get("/garmin")
-
-    # Then
-    assert response.status_code == 401
-    assert "activity.py" in response.json()["detail"]
+    assert response.status_code == 404

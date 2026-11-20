@@ -1,5 +1,7 @@
 """Stores the heart-rate thresholds from .env for hrTSS. It writes to Atlas.
 
+Run from the project root: python -m scripts.set_thresholds
+
 The threshold applies from THRESHOLD_DATE until a later one. Runs before it use it too.
 Re-running with a new THRESHOLD_DATE adds a threshold; the same date updates it.
 
@@ -13,7 +15,7 @@ from datetime import date
 
 from dotenv import load_dotenv
 
-from mongo import upsert_threshold
+from jean_cours.db import upsert_threshold
 
 load_dotenv()
 

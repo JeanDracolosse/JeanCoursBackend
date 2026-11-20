@@ -1,12 +1,12 @@
 from datetime import date
 
-import activity
-import mongo
+from garmin_sync import sync as activity
+from jean_cours import db
 
 
 def whenUpdateFit_thenStoresActivitiesWithFitDataAndMovesLastDateToToday(monkeypatch):
     # Given
-    mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
+    db.configuration_collection.insert_one({"lastDate": "2025-03-01"})
     requested_dates = []
 
     def fake_fetch_from_date(client, start_date, until=None):
@@ -23,14 +23,14 @@ def whenUpdateFit_thenStoresActivitiesWithFitDataAndMovesLastDateToToday(monkeyp
 
     # Then
     assert requested_dates == [date(2025, 3, 1)]
-    activities = list(mongo.activities_collection.find({}, {"_id": 0}))
+    activities = list(db.activities_collection.find({}, {"_id": 0}))
     assert activities == [{"activityId": 1, "distance": 10000, "workoutFeel": 50, "workoutRpe": 30}]
-    assert mongo.get_last_date() == date.today()
+    assert db.get_last_date() == date.today()
 
 
 def whenUpdateFit_thenFetchesFromSinceWhenGiven(monkeypatch):
     # Given
-    mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
+    db.configuration_collection.insert_one({"lastDate": "2025-03-01"})
     requested_dates = []
 
     def fake_fetch_from_date(client, start_date, until=None):
@@ -49,7 +49,7 @@ def whenUpdateFit_thenFetchesFromSinceWhenGiven(monkeypatch):
 
 def whenUpdateFit_thenKeepsLastDateWhenUntilIsGiven(monkeypatch):
     # Given
-    mongo.configuration_collection.insert_one({"lastDate": "2026-11-20"})
+    db.configuration_collection.insert_one({"lastDate": "2026-11-20"})
     requested_ranges = []
 
     def fake_fetch_from_date(client, start_date, until=None):
@@ -64,7 +64,7 @@ def whenUpdateFit_thenKeepsLastDateWhenUntilIsGiven(monkeypatch):
 
     # Then
     assert requested_ranges == [(date(2015, 1, 1), date(2025, 12, 31))]
-    assert mongo.get_last_date() == date(2026, 11, 20)
+    assert db.get_last_date() == date(2026, 11, 20)
 
 
 def whenUpdateFit_thenWaitsBetweenDownloadsButNotAfterTheLast(monkeypatch):

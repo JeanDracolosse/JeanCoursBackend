@@ -1,5 +1,5 @@
-from mongo import upsert_week, upsert_week_type
-from datetime import date
+from jean_cours.db import upsert_week, upsert_week_type
+
 
 week_type_list = [
     {
@@ -21,8 +21,8 @@ week_type_list = [
 ]
 
 week = {
-    "date": "2025-10-28",
-    "weekTypeId": 0
+    "date": "2025-11-10",
+    "weekTypeId": 1
 }
 
 

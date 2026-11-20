@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from training_load import Threshold, daily_load, hr_tss, threshold_on
+from jean_cours.stats.training_load import Threshold, daily_load, hr_tss, threshold_on
 
 THRESHOLD = Threshold(date(2025, 1, 1), lthr=170, resting_hr=50, max_hr=190, trimp_a=0.64, trimp_b=1.92)
 

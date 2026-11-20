@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnectConnectionError
 
-import garmin
+import garmin_sync.client as garmin
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def fake_garmin(monkeypatch):
         needs_mfa = False
 
         def __init__(self, email=None, password=None, return_on_mfa=False):
-            self.garth = SimpleNamespace(dump=lambda path: calls.append(("dump tokens", path)))
+            self.client = SimpleNamespace(dump=lambda path: calls.append(("dump tokens", path)))
 
         def login(self, tokenstore=None):
             if tokenstore:
@@ -99,7 +99,7 @@ def whenLogin_thenRaisesLoginRequiredWhenMfaNeededAndNotInteractive(fake_garmin,
     fake_garmin.needs_mfa = True
 
     # When
-    with pytest.raises(garmin.GarminLoginRequired, match="activity.py"):
+    with pytest.raises(garmin.GarminLoginRequired, match="scripts.sync_garmin"):
         garmin.login(interactive=False)
 
     # Then

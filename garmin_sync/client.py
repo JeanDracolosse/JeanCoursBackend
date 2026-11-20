@@ -1,7 +1,11 @@
-from datetime import date, datetime
-import zipfile
+"""Garmin Connect client: login, activity list, FIT files. Never imported by the web API."""
 import io
 import os
+import zipfile
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any
+
 from dotenv import load_dotenv
 
 from garmin_fit_sdk import Decoder, Stream
@@ -9,7 +13,7 @@ from garminconnect import Garmin, GarminConnectAuthenticationError
 
 load_dotenv()
 
-TOKEN_DIR = "./ressources/token"
+TOKEN_DIR = str(Path(__file__).resolve().parents[1] / "ressources" / "token")
 
 
 class GarminLoginRequired(Exception):
@@ -42,10 +46,10 @@ def login(interactive: bool) -> Garmin:
     if result1 == "needs_mfa":
         if not interactive:
             raise GarminLoginRequired(
-                "Garmin needs an MFA code. Run in a terminal: .venv/Scripts/python.exe activity.py")
+                "Garmin needs an MFA code. Run in a terminal: .venv/Scripts/python.exe -m scripts.sync_garmin")
         mfa_code = input("MFA one-time code (via email or SMS): ")
         garmin.resume_login(result2, mfa_code)
-    garmin.garth.dump(TOKEN_DIR)
+    garmin.client.dump(TOKEN_DIR)
     # The MFA login path skips loading the profile, so reload from the tokens.
     return __login_with_tokens()
 
@@ -56,7 +60,7 @@ def __login_with_tokens() -> Garmin:
     return garmin
 
 
-def download_fit_from_id(client: Garmin, activity_id: str) -> dict[str, any]:
+def download_fit_from_id(client: Garmin, activity_id: str) -> dict[str, Any]:
     """Downloads an activity's FIT file and reads its workout feel and RPE."""
     with zipfile.ZipFile(io.BytesIO(__fetch_fit_from_id(client, activity_id)), 'r') as zip_ref:
         filenames = zip_ref.namelist()
@@ -68,7 +72,7 @@ def download_fit_from_id(client: Garmin, activity_id: str) -> dict[str, any]:
     return __read_running_fit_data_stream(activity_id, stream)
 
 
-def fetch_from_date(client: Garmin, date: date, until: date | None = None) -> None:
+def fetch_from_date(client: Garmin, date: date, until: date | None = None) -> list[dict]:
     """Fetches activities from a date, up to `until` if given. Parses their times to datetimes."""
     activity_list = client.get_activities_by_date(
         startdate=date.isoformat(), enddate=until.isoformat() if until else None)
@@ -82,11 +86,11 @@ def fetch_from_date(client: Garmin, date: date, until: date | None = None) -> No
     return activity_list
 
 
-def __fetch_fit_from_id(client: Garmin, id: str) -> None:
+def __fetch_fit_from_id(client: Garmin, id: str) -> bytes:
     return client.download_activity(activity_id=id, dl_fmt=Garmin.ActivityDownloadFormat.ORIGINAL)
 
 
-def __read_running_fit_data_stream(activity_id: str, fit_stream: Stream) -> dict[str, any]:
+def __read_running_fit_data_stream(activity_id: str, fit_stream: Stream) -> dict[str, Any]:
     decoder = Decoder(fit_stream)
     messages, _ = decoder.read()
 

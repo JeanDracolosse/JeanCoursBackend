@@ -1,6 +1,6 @@
 import pytest
 
-import setThresholds
+from scripts import set_thresholds
 
 ENV = {"THRESHOLD_DATE": "2025-01-01", "LTHR": "170", "RESTING_HR": "50", "MAX_HR": "190",
        "TRIMP_A": "0.64", "TRIMP_B": "1.92"}
@@ -12,7 +12,7 @@ def whenReadThreshold_thenBuildsTheThresholdFromTheEnvironment(monkeypatch):
         monkeypatch.setenv(key, value)
 
     # When
-    result = setThresholds.read_threshold()
+    result = set_thresholds.read_threshold()
 
     # Then
     assert result == {"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92}
@@ -26,6 +26,6 @@ def whenReadThreshold_thenStopsWhenAKeyIsMissing(monkeypatch):
 
     # When
     with pytest.raises(SystemExit, match="MAX_HR"):
-        setThresholds.read_threshold()
+        set_thresholds.read_threshold()
 
     # Then

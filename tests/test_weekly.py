@@ -2,15 +2,16 @@ from datetime import date, datetime
 
 import pytest
 
-import mongo
-from aggregation import ActivityFilter
-from training_load import hr_tss
+from jean_cours import db
+from jean_cours.stats import weekly
+from jean_cours.stats.pipelines import ActivityFilter
+from jean_cours.stats.training_load import hr_tss
 
 
 def whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly(two_weeks_of_runs):
     # Given
     # When
-    result = mongo.get_distance()
+    result = weekly.get_distance()
 
     # Then
     assert result == {
@@ -25,7 +26,7 @@ def whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly(two_weeks_of_run
 def whenGetHrTimeInZone_thenSumsEachZonePerWeek(two_weeks_of_runs):
     # Given
     # When
-    result = mongo.get_hr_time_in_zone()
+    result = weekly.get_hr_time_in_zone()
 
     # Then
     assert result == {
@@ -40,7 +41,7 @@ def whenGetHrTimeInZone_thenSumsEachZonePerWeek(two_weeks_of_runs):
 def whenGetPowerTimeInZone_thenSumsEachZonePerWeek(two_weeks_of_runs):
     # Given
     # When
-    result = mongo.get_power_time_in_zone()
+    result = weekly.get_power_time_in_zone()
 
     # Then
     assert result == {
@@ -57,7 +58,7 @@ def whenGetCumulativeMetricListByWeek_thenSumsEachMetricPerWeek(two_weeks_of_run
     metrics = ["distance", "elevationGain"]
 
     # When
-    result = mongo.get_cumulative_metric_list_by_week(metrics)
+    result = weekly.get_cumulative_metric_list_by_week(metrics)
 
     # Then
     assert result == {"distance": [15000, 8000], "elevationGain": [100, 20]}
@@ -68,7 +69,7 @@ def whenGetAverageMetricListByWeek_thenAveragesEachMetricPerWeek(two_weeks_of_ru
     metrics = ["averageHR"]
 
     # When
-    result = mongo.get_average_metric_list_by_week(metrics)
+    result = weekly.get_average_metric_list_by_week(metrics)
 
     # Then
     assert result == {"averageHR": [147.5, 160]}
@@ -79,7 +80,7 @@ def whenGetMetricListByActivity_thenReturnsRunsOfThatWeekSortedByStartTime(two_w
     metrics = ["distance"]
 
     # When
-    result = mongo.get_metric_list_by_activity(2025, 10, metrics)
+    result = weekly.get_metric_list_by_activity(2025, 10, metrics)
 
     # Then
     assert result == {
@@ -91,7 +92,7 @@ def whenGetMetricListByActivity_thenReturnsRunsOfThatWeekSortedByStartTime(two_w
 def whenGetDistance_thenReturnsEmptyArraysWithoutRuns():
     # Given
     # When
-    result = mongo.get_distance()
+    result = weekly.get_distance()
 
     # Then
     assert result == {"distance": [], "elevationGain": [], "elevationLoss": [],
@@ -101,7 +102,7 @@ def whenGetDistance_thenReturnsEmptyArraysWithoutRuns():
 def whenGetHrTimeInZone_thenReturnsEmptyArraysWithoutRuns():
     # Given
     # When
-    result = mongo.get_hr_time_in_zone()
+    result = weekly.get_hr_time_in_zone()
 
     # Then
     assert result == {f"hrTimeInZone_{zone}": [] for zone in range(1, 6)}
@@ -110,7 +111,7 @@ def whenGetHrTimeInZone_thenReturnsEmptyArraysWithoutRuns():
 def whenGetPowerTimeInZone_thenReturnsEmptyArraysWithoutRuns():
     # Given
     # When
-    result = mongo.get_power_time_in_zone()
+    result = weekly.get_power_time_in_zone()
 
     # Then
     assert result == {f"powerTimeInZone_{zone}": [] for zone in range(1, 6)}
@@ -119,7 +120,7 @@ def whenGetPowerTimeInZone_thenReturnsEmptyArraysWithoutRuns():
 def whenGetAverageMetricListByWeek_thenReturnsEmptyArraysWithoutRuns():
     # Given
     # When
-    result = mongo.get_average_metric_list_by_week(["averageHR"])
+    result = weekly.get_average_metric_list_by_week(["averageHR"])
 
     # Then
     assert result == {"averageHR": []}
@@ -128,7 +129,7 @@ def whenGetAverageMetricListByWeek_thenReturnsEmptyArraysWithoutRuns():
 def whenGetCumulativeMetricListByWeek_thenReturnsEmptyArraysWithoutRuns():
     # Given
     # When
-    result = mongo.get_cumulative_metric_list_by_week(["distance"])
+    result = weekly.get_cumulative_metric_list_by_week(["distance"])
 
     # Then
     assert result == {"distance": []}
@@ -137,7 +138,7 @@ def whenGetCumulativeMetricListByWeek_thenReturnsEmptyArraysWithoutRuns():
 def whenGetMetricListByActivity_thenReturnsEmptyArraysForWeekWithoutRuns(two_weeks_of_runs):
     # Given
     # When
-    result = mongo.get_metric_list_by_activity(2025, 30, ["distance"])
+    result = weekly.get_metric_list_by_activity(2025, 30, ["distance"])
 
     # Then
     assert result == {"distance": [], "startTimeLocal": []}
@@ -146,7 +147,7 @@ def whenGetMetricListByActivity_thenReturnsEmptyArraysForWeekWithoutRuns(two_wee
 def whenGetIndexes_thenReturnsOneEntryPerWeekWithRuns(two_weeks_of_runs):
     # Given
     # When
-    result = mongo.get_indexes()
+    result = weekly.get_indexes()
 
     # Then
     assert len(result) == 2
@@ -155,7 +156,7 @@ def whenGetIndexes_thenReturnsOneEntryPerWeekWithRuns(two_weeks_of_runs):
 def whenGetIndexes_thenReturnsMondayOfEachIsoWeek(two_weeks_of_runs):
     # Given
     # When
-    result = mongo.get_indexes()
+    result = weekly.get_indexes()
 
     # Then
     assert result == [datetime(2025, 3, 3), datetime(2025, 3, 10)]
@@ -163,11 +164,11 @@ def whenGetIndexes_thenReturnsMondayOfEachIsoWeek(two_weeks_of_runs):
 
 def whenGetIndexes_thenUsesIsoYearForWeeksSpanningNewYear():
     # Given
-    mongo.activities_collection.insert_one(
+    db.activities_collection.insert_one(
         {"activityId": 1, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 12, 31, 8)})
 
     # When
-    result = mongo.get_indexes()
+    result = weekly.get_indexes()
 
     # Then
     assert result == [datetime(2025, 12, 29)]
@@ -175,7 +176,7 @@ def whenGetIndexes_thenUsesIsoYearForWeeksSpanningNewYear():
 
 def whenGetDistance_thenWeeksAreInChronologicalOrder():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         {"activityId": 1, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 2, 24, 8),
          "distance": 9000, "elevationGain": 0, "elevationLoss": 0},
         {"activityId": 2, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 3, 3, 8),
@@ -183,7 +184,7 @@ def whenGetDistance_thenWeeksAreInChronologicalOrder():
     ])
 
     # When
-    result = mongo.get_distance()
+    result = weekly.get_distance()
 
     # Then
     assert result["distance"] == [9000, 10000]
@@ -191,14 +192,14 @@ def whenGetDistance_thenWeeksAreInChronologicalOrder():
 
 def whenGetIndexes_thenWeeksAreInChronologicalOrderAcrossYears():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         {"activityId": 1, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2026, 1, 5, 8)},
         {"activityId": 2, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 12, 22, 8)},
         {"activityId": 3, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 12, 31, 8)},
     ])
 
     # When
-    result = mongo.get_indexes()
+    result = weekly.get_indexes()
 
     # Then
     assert result == [datetime(2025, 12, 22), datetime(2025, 12, 29), datetime(2026, 1, 5)]
@@ -210,13 +211,13 @@ def _run(activity_id, start, type_id=1, **fields):
 
 def whenGetIndexes_thenListsWeeksWithoutRuns():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         _run(1, datetime(2025, 3, 3, 8)),
         _run(2, datetime(2025, 3, 19, 8)),
     ])
 
     # When
-    result = mongo.get_indexes()
+    result = weekly.get_indexes()
 
     # Then
     assert result == [datetime(2025, 3, 3), datetime(2025, 3, 10), datetime(2025, 3, 17)]
@@ -224,13 +225,13 @@ def whenGetIndexes_thenListsWeeksWithoutRuns():
 
 def whenGetDistance_thenFillsWeeksWithoutRunsWithZero():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         _run(1, datetime(2025, 3, 3, 8), distance=10000, elevationGain=0, elevationLoss=0),
         _run(2, datetime(2025, 3, 19, 8), distance=8000, elevationGain=0, elevationLoss=0),
     ])
 
     # When
-    result = mongo.get_distance()
+    result = weekly.get_distance()
 
     # Then
     assert result["distance"] == [10000, 0, 8000]
@@ -238,13 +239,13 @@ def whenGetDistance_thenFillsWeeksWithoutRunsWithZero():
 
 def whenGetAverageMetricListByWeek_thenFillsWeeksWithoutRunsWithNull():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         _run(1, datetime(2025, 3, 3, 8), averageHR=150, duration=3600),
         _run(2, datetime(2025, 3, 19, 8), averageHR=160, duration=3600),
     ])
 
     # When
-    result = mongo.get_average_metric_list_by_week(["averageHR"])
+    result = weekly.get_average_metric_list_by_week(["averageHR"])
 
     # Then
     assert result == {"averageHR": [150, None, 160]}
@@ -255,7 +256,7 @@ def whenGetDistance_thenOnlyCountsRunsInsideTheRange(two_weeks_of_runs):
     activity_filter = ActivityFilter(start=date(2025, 3, 12), end=date(2025, 3, 12))
 
     # When
-    result = mongo.get_distance(activity_filter)
+    result = weekly.get_distance(activity_filter)
 
     # Then
     assert result["distance"] == [8000]
@@ -266,8 +267,8 @@ def whenGetDistance_thenZeroFillsTheWholeRequestedRange(two_weeks_of_runs):
     activity_filter = ActivityFilter(start=date(2025, 2, 24), end=date(2025, 3, 17))
 
     # When
-    distance = mongo.get_distance(activity_filter)
-    indexes = mongo.get_indexes(activity_filter)
+    distance = weekly.get_distance(activity_filter)
+    indexes = weekly.get_indexes(activity_filter)
 
     # Then
     assert distance["distance"] == [0, 15000, 8000, 0]
@@ -279,7 +280,7 @@ def whenGetDistance_thenUsesRequestedActivityTypes(two_weeks_of_runs):
     activity_filter = ActivityFilter(types=(2,))
 
     # When
-    result = mongo.get_distance(activity_filter)
+    result = weekly.get_distance(activity_filter)
 
     # Then
     assert result["distance"] == [40000]
@@ -287,13 +288,13 @@ def whenGetDistance_thenUsesRequestedActivityTypes(two_weeks_of_runs):
 
 def whenGetAverageMetricListByWeek_thenWeightsRunsByDuration():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         _run(1, datetime(2025, 3, 3, 8), averageHR=150, duration=1800),
         _run(2, datetime(2025, 3, 4, 8), averageHR=160, duration=7200),
     ])
 
     # When
-    result = mongo.get_average_metric_list_by_week(["averageHR"])
+    result = weekly.get_average_metric_list_by_week(["averageHR"])
 
     # Then
     assert result == {"averageHR": [158]}
@@ -301,13 +302,13 @@ def whenGetAverageMetricListByWeek_thenWeightsRunsByDuration():
 
 def whenGetAverageMetricListByWeek_thenIgnoresRunsWithoutTheMetric():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         _run(1, datetime(2025, 3, 3, 8), averageHR=150, duration=1800),
         _run(2, datetime(2025, 3, 4, 8), duration=7200),
     ])
 
     # When
-    result = mongo.get_average_metric_list_by_week(["averageHR"])
+    result = weekly.get_average_metric_list_by_week(["averageHR"])
 
     # Then
     assert result == {"averageHR": [150]}
@@ -315,12 +316,12 @@ def whenGetAverageMetricListByWeek_thenIgnoresRunsWithoutTheMetric():
 
 def whenGetAverageMetricListByWeek_thenReturnsNullForWeekWhereNoRunHasTheMetric():
     # Given
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         _run(1, datetime(2025, 3, 3, 8), duration=1800),
     ])
 
     # When
-    result = mongo.get_average_metric_list_by_week(["averageHR"])
+    result = weekly.get_average_metric_list_by_week(["averageHR"])
 
     # Then
     assert result == {"averageHR": [None]}
@@ -331,24 +332,24 @@ THRESHOLD = {"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "
 
 def whenGetTrainingLoad_thenIsAlignedWithIndexes(two_weeks_of_runs):
     # Given
-    mongo.upsert_threshold(THRESHOLD)
-    threshold = mongo.get_thresholds()[0]
+    db.upsert_threshold(THRESHOLD)
+    threshold = weekly.get_thresholds()[0]
 
     # When
-    result = mongo.get_training_load()
+    result = weekly.get_training_load()
 
     # Then
-    assert len(result["tss"]) == len(mongo.get_indexes()) == 2
+    assert len(result["tss"]) == len(weekly.get_indexes()) == 2
     assert result["tss"][0] == pytest.approx(hr_tss(2700, 150, threshold) + hr_tss(900, 140, threshold))
     assert result["tss"][1] == pytest.approx(hr_tss(3000, 160, threshold))
 
 
 def whenGetTrainingLoadByDay_thenWarmsUpCtlFromRunsBeforeTheRange(two_weeks_of_runs):
     # Given
-    mongo.upsert_threshold(THRESHOLD)
+    db.upsert_threshold(THRESHOLD)
 
     # When
-    result = mongo.get_training_load_by_day(ActivityFilter(start=date(2025, 3, 10), end=date(2025, 3, 16)))
+    result = weekly.get_training_load_by_day(ActivityFilter(start=date(2025, 3, 10), end=date(2025, 3, 16)))
 
     # Then
     assert result["date"][0] == date(2025, 3, 10)
@@ -359,8 +360,8 @@ def whenGetTrainingLoadByDay_thenWarmsUpCtlFromRunsBeforeTheRange(two_weeks_of_r
 def whenGetTrainingLoad_thenRaisesWithoutThresholds(two_weeks_of_runs):
     # Given
     # When
-    with pytest.raises(mongo.NoThresholds):
-        mongo.get_training_load()
+    with pytest.raises(weekly.NoThresholds):
+        weekly.get_training_load()
 
     # Then
 
@@ -370,7 +371,7 @@ def whenGetMetricListByActivity_thenDoesNotChangeTheMetricList(two_weeks_of_runs
     metrics = ["distance"]
 
     # When
-    mongo.get_metric_list_by_activity(2025, 10, metrics)
+    weekly.get_metric_list_by_activity(2025, 10, metrics)
 
     # Then
     assert metrics == ["distance"]
@@ -378,12 +379,12 @@ def whenGetMetricListByActivity_thenDoesNotChangeTheMetricList(two_weeks_of_runs
 
 def whenGetWeekTypes_thenReturnsEachWeekWithItsTypeLabel():
     # Given
-    mongo.upsert_week_type({"weekTypeId": 0, "label": "Base"})
-    mongo.upsert_week_type({"weekTypeId": 1, "label": "Récupération"})
-    mongo.upsert_week({"date": "2025-11-10", "weekTypeId": 1})
+    db.upsert_week_type({"weekTypeId": 0, "label": "Base"})
+    db.upsert_week_type({"weekTypeId": 1, "label": "Récupération"})
+    db.upsert_week({"date": "2025-11-10", "weekTypeId": 1})
 
     # When
-    result = mongo.get_week_types()
+    result = weekly.get_week_types()
 
     # Then
     assert result == [{"date": "2025-11-10", "label": "Récupération"}]
@@ -391,20 +392,20 @@ def whenGetWeekTypes_thenReturnsEachWeekWithItsTypeLabel():
 
 def whenUpsertActivity_thenMergesFieldsIntoTheExistingActivity():
     # Given
-    mongo.upsert_activity({"activityId": 1, "distance": 10000})
+    db.upsert_activity({"activityId": 1, "distance": 10000})
 
     # When
-    mongo.upsert_activity({"activityId": 1, "workoutRpe": 30})
+    db.upsert_activity({"activityId": 1, "workoutRpe": 30})
 
     # Then
-    activities = list(mongo.activities_collection.find({}, {"_id": 0}))
+    activities = list(db.activities_collection.find({}, {"_id": 0}))
     assert activities == [{"activityId": 1, "distance": 10000, "workoutRpe": 30}]
 
 
 def whenGetLastDate_thenReturnsTodayWhenNothingIsStored():
     # Given
     # When
-    result = mongo.get_last_date()
+    result = db.get_last_date()
 
     # Then
     assert result == date.today()
@@ -412,10 +413,10 @@ def whenGetLastDate_thenReturnsTodayWhenNothingIsStored():
 
 def whenGetLastDate_thenReturnsTheStoredDate():
     # Given
-    mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
+    db.configuration_collection.insert_one({"lastDate": "2025-03-01"})
 
     # When
-    result = mongo.get_last_date()
+    result = db.get_last_date()
 
     # Then
     assert result == date(2025, 3, 1)
@@ -423,11 +424,11 @@ def whenGetLastDate_thenReturnsTheStoredDate():
 
 def whenSetLastDate_thenStoresTodayAsIsoString():
     # Given
-    mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
+    db.configuration_collection.insert_one({"lastDate": "2025-03-01"})
 
     # When
-    mongo.set_last_date()
+    db.set_last_date()
 
     # Then
-    configurations = list(mongo.configuration_collection.find({}, {"_id": 0}))
+    configurations = list(db.configuration_collection.find({}, {"_id": 0}))
     assert configurations == [{"lastDate": date.today().isoformat()}]

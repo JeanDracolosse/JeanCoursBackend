@@ -1,17 +1,16 @@
+"""Web API. Read-only stats; never imports Garmin code."""
 from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-from activity import update_fit
-from aggregation import RUNNING_TYPES, ActivityFilter
-from garmin import GarminLoginRequired
-from mongo import (NoThresholds, get_average_metric_list_by_week, get_cumulative_metric_list_by_week, get_distance,
-                   get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_power_time_in_zone,
-                   get_training_load, get_training_load_by_day, get_week_types)
-from schemas import (ActivityMetrics, DistanceWeeks, ErrorDetail, HrTimeInZoneWeeks, PowerTimeInZoneWeeks,
-                     TrainingLoadDays, TrainingLoadWeeks, WeeklyMetrics, WeekType)
+from jean_cours.api.schemas import (ActivityMetrics, DistanceWeeks, ErrorDetail, HrTimeInZoneWeeks,
+                                   PowerTimeInZoneWeeks, TrainingLoadDays, TrainingLoadWeeks, WeeklyMetrics, WeekType)
+from jean_cours.stats.pipelines import RUNNING_TYPES, ActivityFilter
+from jean_cours.stats.weekly import (NoThresholds, get_average_metric_list_by_week, get_cumulative_metric_list_by_week,
+                                     get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity,
+                                     get_power_time_in_zone, get_training_load, get_training_load_by_day, get_week_types)
 
 app = FastAPI(
     title="Jean Cours API",
@@ -25,11 +24,10 @@ async def no_thresholds_handler(request: Request, error: NoThresholds):
     return JSONResponse(status_code=409, content={"detail": str(error)})
 
 
-NO_THRESHOLDS = {409: {"model": ErrorDetail, "description": "No heart-rate threshold stored. Run `setThresholds.py`."}}
+NO_THRESHOLDS = {409: {"model": ErrorDetail, "description": "No heart-rate threshold stored. Run `scripts/set_thresholds.py`."}}
 
 WEEKLY = "Weekly stats"
 DAILY = "Daily stats"
-SYNC = "Sync"
 PLANNING = "Planning"
 
 Metrics = Annotated[list[str], Query(
@@ -115,18 +113,3 @@ async def metrics_by_activity(
 @app.get("/weekTypes", tags=[PLANNING], response_model=list[WeekType], summary="Planned type of each week")
 async def week_types():
     return get_week_types()
-
-
-@app.get("/garmin", tags=[SYNC], response_model=None, summary="Sync new activities from Garmin",
-         description="Fetches activities since the last sync and stores them.",
-         responses={401: {"model": ErrorDetail, "description": "Garmin needs an MFA code. Run `activity.py` in a terminal."}})
-def sync_garmin():
-    try:
-        update_fit()
-    except GarminLoginRequired as error:
-        raise HTTPException(status_code=401, detail=str(error))
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

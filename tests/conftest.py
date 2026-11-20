@@ -1,6 +1,6 @@
 """Shared test setup.
 
-mongo.py connects on import. The client is swapped for mongomock first.
+weekly.py connects on import. The client is swapped for mongomock first.
 """
 from datetime import datetime
 
@@ -41,13 +41,13 @@ def _group_stage(in_collection, database, options):
 
 mongomock_aggregate._PIPELINE_HANDLERS["$group"] = _group_stage
 
-import mongo  # noqa: E402  Must come after the client patch.
+from jean_cours import db  # noqa: E402  Must come after the client patch.
 
 
 @pytest.fixture(autouse=True)
 def empty_database():
-    for collection_name in mongo.database.list_collection_names():
-        mongo.database[collection_name].delete_many({})
+    for collection_name in db.database.list_collection_names():
+        db.database[collection_name].delete_many({})
     yield
 
 
@@ -66,7 +66,7 @@ def two_weeks_of_runs():
 
     Inserted out of order to test sorting.
     """
-    mongo.activities_collection.insert_many([
+    db.activities_collection.insert_many([
         _activity(3, datetime(2025, 3, 10, 8), type_id=1,
                   distance=8000, elevationGain=20, elevationLoss=20, averageHR=160, duration=3000,
                   hrTimeInZone_1=1, hrTimeInZone_2=2, hrTimeInZone_3=3, hrTimeInZone_4=4, hrTimeInZone_5=5,

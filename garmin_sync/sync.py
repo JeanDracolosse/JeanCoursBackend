@@ -1,9 +1,9 @@
-import argparse
+"""Syncs Garmin activities into Mongo."""
 import time
 from datetime import date
 
-from garmin import download_fit_from_id, fetch_from_date, login
-from mongo import get_last_date, set_last_date, upsert_activity
+from garmin_sync.client import download_fit_from_id, fetch_from_date, login
+from jean_cours.db import get_last_date, set_last_date, upsert_activity
 
 
 def update_fit(interactive: bool = False, since: date | None = None, until: date | None = None,
@@ -28,12 +28,3 @@ def update_fit(interactive: bool = False, since: date | None = None, until: date
             time.sleep(delay)
     if until is None:
         set_last_date()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Sync activities from Garmin. Re-runs are safe.")
-    parser.add_argument("--since", type=date.fromisoformat, help="Fetch from this date (YYYY-MM-DD) instead of the last sync.")
-    parser.add_argument("--until", type=date.fromisoformat, help="Fetch up to this date (YYYY-MM-DD). Keeps the last sync date.")
-    parser.add_argument("--delay", type=float, default=1.0, help="Seconds between FIT downloads (default: 1).")
-    arguments = parser.parse_args()
-    update_fit(interactive=True, since=arguments.since, until=arguments.until, delay=arguments.delay)
