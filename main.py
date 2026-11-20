@@ -1,6 +1,7 @@
 from typing import Annotated, Optional
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from activity import update_fit
+from garmin import GarminLoginRequired
 from mongo import get_week_types, get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_cumulative_metric_list_by_week, get_average_metric_list_by_week, get_power_time_in_zone
 app = FastAPI()
 
@@ -52,8 +53,11 @@ async def get_week_types_data():
 
 
 @app.get("/garmin")
-async def root():
-    return update_fit()
+def sync_garmin():
+    try:
+        return update_fit()
+    except GarminLoginRequired as error:
+        raise HTTPException(status_code=401, detail=str(error))
 
 if __name__ == "__main__":
     import uvicorn

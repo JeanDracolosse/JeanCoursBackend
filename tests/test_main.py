@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 import main
 import mongo
+from garmin import GarminLoginRequired
 
 
 @pytest.fixture
@@ -127,3 +128,18 @@ def whenGetGarminRoute_thenRunsTheSync(client, monkeypatch):
     # Then
     assert response.status_code == 200
     assert calls == ["sync"]
+
+
+def whenGetGarminRoute_thenReturns401WhenLoginNeedsMfa(client, monkeypatch):
+    # Given
+    def sync_needing_mfa():
+        raise GarminLoginRequired("Garmin needs an MFA code. Run in a terminal: .venv/Scripts/python.exe activity.py")
+
+    monkeypatch.setattr(main, "update_fit", sync_needing_mfa)
+
+    # When
+    response = client.get("/garmin")
+
+    # Then
+    assert response.status_code == 401
+    assert "activity.py" in response.json()["detail"]

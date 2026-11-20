@@ -9,13 +9,14 @@ def whenUpdateFit_thenStoresActivitiesWithFitDataAndMovesLastDateToToday(monkeyp
     mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
     requested_dates = []
 
-    def fake_fetch_from_date(start_date):
+    def fake_fetch_from_date(client, start_date):
         requested_dates.append(start_date)
         return [{"activityId": 1, "distance": 10000}]
 
+    monkeypatch.setattr(activity, "login", lambda interactive: "client")
     monkeypatch.setattr(activity, "fetch_from_date", fake_fetch_from_date)
     monkeypatch.setattr(activity, "download_fit_from_id",
-                        lambda activity_id: {"activityId": activity_id, "workoutFeel": 50, "workoutRpe": 30})
+                        lambda client, activity_id: {"activityId": activity_id, "workoutFeel": 50, "workoutRpe": 30})
 
     # When
     activity.update_fit()
@@ -25,3 +26,30 @@ def whenUpdateFit_thenStoresActivitiesWithFitDataAndMovesLastDateToToday(monkeyp
     activities = list(mongo.activities_collection.find({}, {"_id": 0}))
     assert activities == [{"activityId": 1, "distance": 10000, "workoutFeel": 50, "workoutRpe": 30}]
     assert mongo.get_last_date() == date.today()
+
+
+def whenUpdateFit_thenLogsInOnceForAllActivities(monkeypatch):
+    # Given
+    logins = []
+    clients_used = []
+    client = object()
+
+    def fake_login(interactive):
+        logins.append(interactive)
+        return client
+
+    def fake_download_fit_from_id(used_client, activity_id):
+        clients_used.append(used_client)
+        return {"activityId": activity_id}
+
+    monkeypatch.setattr(activity, "login", fake_login)
+    monkeypatch.setattr(activity, "fetch_from_date",
+                        lambda used_client, start_date: [{"activityId": 1}, {"activityId": 2}, {"activityId": 3}])
+    monkeypatch.setattr(activity, "download_fit_from_id", fake_download_fit_from_id)
+
+    # When
+    activity.update_fit()
+
+    # Then
+    assert logins == [False]
+    assert clients_used == [client, client, client]
