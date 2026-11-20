@@ -23,6 +23,10 @@ Use the project virtualenv at `.venv` (Windows layout):
 
 No linter or formatter is configured.
 
+## Comments
+
+Google-style docstrings (`Args:`, `Returns:`, `Raises:`). Comment only when the code doesn't say it already. Keep it minimal, in short sentences.
+
 ## Tests
 
 - Naming: test functions are `whenMethodName_thenWhatItDoes` (`pytest.ini` collects `when*`, not `test_*`). Each test body has three sections marked `# Given`, `# When`, `# Then`; keep the comments even when a section is empty.

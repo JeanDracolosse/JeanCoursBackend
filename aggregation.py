@@ -1,5 +1,4 @@
-# Weekly pipelines group on this numeric key and sort on it, so every
-# endpoint returns its per-week arrays in the same chronological order.
+# Shared by all weekly pipelines. Keeps their arrays aligned and chronological.
 WEEK_GROUP_ID = {"year": "$year", "week": "$week"}
 SORT_BY_WEEK = {"$sort": {"_id.year": 1, "_id.week": 1}}
 

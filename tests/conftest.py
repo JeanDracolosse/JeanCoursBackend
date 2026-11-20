@@ -1,8 +1,6 @@
 """Shared test setup.
 
-mongo.py connects to MongoDB as soon as it is imported, so the real client is
-replaced by an in-memory mongomock client here, before any test module
-imports the application code.
+mongo.py connects on import. The client is swapped for mongomock first.
 """
 from datetime import datetime
 
@@ -14,8 +12,7 @@ from mongomock import aggregate as mongomock_aggregate
 _in_memory_client = mongomock.MongoClient()
 pymongo.MongoClient = lambda *args, **kwargs: _in_memory_client
 
-# mongomock does not implement $isoWeek / $isoWeekYear, which every weekly
-# pipeline uses. Both map directly onto Python's ISO calendar.
+# mongomock lacks $isoWeek and $isoWeekYear. Python's ISO calendar provides both.
 _original_handle_date_operator = mongomock_aggregate._Parser._handle_date_operator
 
 
@@ -31,7 +28,7 @@ def _handle_date_operator(self, operator, values):
 
 mongomock_aggregate._Parser._handle_date_operator = _handle_date_operator
 
-import mongo  # noqa: E402  (must be imported after the client is patched)
+import mongo  # noqa: E402  Must come after the client patch.
 
 
 @pytest.fixture(autouse=True)
@@ -52,9 +49,9 @@ def _activity(activity_id, start, type_id=1, **fields):
 
 @pytest.fixture
 def two_weeks_of_runs():
-    """Runs in ISO weeks 10 and 11 of 2025, plus one non-running activity.
+    """Runs in ISO weeks 10 and 11 of 2025, plus one non-run.
 
-    Inserted out of order so that tests also check the pipelines' sorting.
+    Inserted out of order to test sorting.
     """
     mongo.activities_collection.insert_many([
         _activity(3, datetime(2025, 3, 10, 8), type_id=1,

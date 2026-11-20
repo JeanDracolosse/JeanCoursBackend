@@ -13,13 +13,24 @@ TOKEN_DIR = "./ressources/token"
 
 
 class GarminLoginRequired(Exception):
-    """Garmin asked for an MFA code but no one is there to type it."""
+    """Garmin needs an MFA code, but no terminal can prompt for it."""
 
 
 def login(interactive: bool) -> Garmin:
-    """Log in with the saved tokens, falling back to email/password only
-    when the tokens are missing or rejected. Network and rate-limit errors
-    are raised as-is so they never trigger a password login."""
+    """Logs in to Garmin Connect.
+
+    Uses the saved tokens. Falls back to email/password only if they are
+    missing or rejected.
+
+    Args:
+        interactive: Whether to prompt for an MFA code on stdin.
+
+    Returns:
+        A logged-in Garmin client.
+
+    Raises:
+        GarminLoginRequired: An MFA code is needed and interactive is False.
+    """
     try:
         return __login_with_tokens()
     except (FileNotFoundError, GarminConnectAuthenticationError):
@@ -35,7 +46,7 @@ def login(interactive: bool) -> Garmin:
         mfa_code = input("MFA one-time code (via email or SMS): ")
         garmin.resume_login(result2, mfa_code)
     garmin.garth.dump(TOKEN_DIR)
-    # Reload from the fresh tokens: the MFA early-return login skips loading the profile.
+    # The MFA login path skips loading the profile, so reload from the tokens.
     return __login_with_tokens()
 
 
@@ -46,6 +57,7 @@ def __login_with_tokens() -> Garmin:
 
 
 def download_fit_from_id(client: Garmin, activity_id: str) -> dict[str, any]:
+    """Downloads an activity's FIT file and reads its workout feel and RPE."""
     with zipfile.ZipFile(io.BytesIO(__fetch_fit_from_id(client, activity_id)), 'r') as zip_ref:
         filenames = zip_ref.namelist()
         file_data = zip_ref.read(filenames[0])
@@ -57,6 +69,7 @@ def download_fit_from_id(client: Garmin, activity_id: str) -> dict[str, any]:
 
 
 def fetch_from_date(client: Garmin, date: date) -> None:
+    """Fetches activities since a date. Parses their times to datetimes."""
     activity_list = client.get_activities_by_date(startdate=date.isoformat())
     for activity in activity_list:
         activity['startTimeLocal'] = datetime.strptime(

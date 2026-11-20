@@ -11,8 +11,10 @@ import garmin
 
 @pytest.fixture
 def fake_garmin(monkeypatch):
-    """Replaces the Garmin client class. Every login attempt is recorded in
-    FakeGarmin.calls; set token_login_errors / needs_mfa to pick a scenario."""
+    """Fakes the Garmin class and records logins in FakeGarmin.calls.
+
+    Set token_login_errors and needs_mfa to pick a scenario.
+    """
     calls = []
 
     class FakeGarmin:
