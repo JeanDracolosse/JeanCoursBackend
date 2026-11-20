@@ -74,15 +74,15 @@ def get_indexes() -> None:
 
 
 def get_hr_time_in_zone() -> None:
-    return __aggregate_activities_pipeline(HR_TIME_IN_ZONE_PIPELINE)[0]
+    return __aggregate_arrays(HR_TIME_IN_ZONE_PIPELINE)
 
 
 def get_power_time_in_zone() -> None:
-    return __aggregate_activities_pipeline(POWER_TIME_IN_ZONE_PIPELINE)[0]
+    return __aggregate_arrays(POWER_TIME_IN_ZONE_PIPELINE)
 
 
 def get_distance() -> None:
-    return __aggregate_activities_pipeline(DISTANCE_PIPELINE)[0]
+    return __aggregate_arrays(DISTANCE_PIPELINE)
 
 
 def __aggregate_activities_pipeline(pipeline: dict) -> dict:
@@ -90,18 +90,30 @@ def __aggregate_activities_pipeline(pipeline: dict) -> dict:
     return [data for data in cursor]
 
 
+def __aggregate_arrays(pipeline: list[dict]) -> dict:
+    """Runs a pipeline that collapses into one document of arrays.
+
+    $group returns nothing when no activity matches. Returns empty arrays then.
+    """
+    results = __aggregate_activities_pipeline(pipeline)
+    if results:
+        return results[0]
+    last_group = next(stage["$group"] for stage in reversed(pipeline) if "$group" in stage)
+    return {field: [] for field in last_group if field != "_id"}
+
+
 def get_cumulative_metric_list_by_week(metric_list: list) -> None:
-    return __aggregate_activities_pipeline(get_metric_list_pipeline_by_week(metric_list, "sum"))[0]
+    return __aggregate_arrays(get_metric_list_pipeline_by_week(metric_list, "sum"))
 
 
 def get_average_metric_list_by_week(metric_list: list) -> None:
-    return __aggregate_activities_pipeline(get_metric_list_pipeline_by_week(metric_list, "avg"))[0]
+    return __aggregate_arrays(get_metric_list_pipeline_by_week(metric_list, "avg"))
 
 
 def get_metric_list_by_activity(year: int, week: int, metric_list: list) -> None:
     if "startTimeLocal" not in metric_list:
         metric_list.append("startTimeLocal")
-    return __aggregate_activities_pipeline(get_metric_list_pipeline_by_activity(year, week, metric_list))[0]
+    return __aggregate_arrays(get_metric_list_pipeline_by_activity(year, week, metric_list))
 
 def get_week_types() -> dict:
     cursor = week_collection.aggregate(get_week_types_pipeline())

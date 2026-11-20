@@ -86,6 +86,61 @@ def whenGetMetricListByActivity_thenReturnsRunsOfThatWeekSortedByStartTime(two_w
     }
 
 
+def whenGetDistance_thenReturnsEmptyArraysWithoutRuns():
+    # Given
+    # When
+    result = mongo.get_distance()
+
+    # Then
+    assert result == {"distance": [], "elevationGain": [], "elevationLoss": [],
+                      "kilometerEffort": [], "fullKilometerEffort": []}
+
+
+def whenGetHrTimeInZone_thenReturnsEmptyArraysWithoutRuns():
+    # Given
+    # When
+    result = mongo.get_hr_time_in_zone()
+
+    # Then
+    assert result == {f"hrTimeInZone_{zone}": [] for zone in range(1, 6)}
+
+
+def whenGetPowerTimeInZone_thenReturnsEmptyArraysWithoutRuns():
+    # Given
+    # When
+    result = mongo.get_power_time_in_zone()
+
+    # Then
+    assert result == {f"powerTimeInZone_{zone}": [] for zone in range(1, 6)}
+
+
+def whenGetAverageMetricListByWeek_thenReturnsEmptyArraysWithoutRuns():
+    # Given
+    # When
+    result = mongo.get_average_metric_list_by_week(["averageHR"])
+
+    # Then
+    assert result == {"averageHR": []}
+
+
+def whenGetCumulativeMetricListByWeek_thenReturnsEmptyArraysWithoutRuns():
+    # Given
+    # When
+    result = mongo.get_cumulative_metric_list_by_week(["distance"])
+
+    # Then
+    assert result == {"distance": []}
+
+
+def whenGetMetricListByActivity_thenReturnsEmptyArraysForWeekWithoutRuns(two_weeks_of_runs):
+    # Given
+    # When
+    result = mongo.get_metric_list_by_activity(2025, 30, ["distance"])
+
+    # Then
+    assert result == {"distance": [], "startTimeLocal": []}
+
+
 def whenGetIndexes_thenReturnsOneEntryPerWeekWithRuns(two_weeks_of_runs):
     # Given
     # When

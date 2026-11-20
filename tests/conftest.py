@@ -28,6 +28,19 @@ def _handle_date_operator(self, operator, values):
 
 mongomock_aggregate._Parser._handle_date_operator = _handle_date_operator
 
+# Real MongoDB's $group returns no document for an empty input. mongomock returns one.
+_original_group_stage = mongomock_aggregate._PIPELINE_HANDLERS["$group"]
+
+
+def _group_stage(in_collection, database, options):
+    documents = list(in_collection)
+    if not documents:
+        return []
+    return _original_group_stage(documents, database, options)
+
+
+mongomock_aggregate._PIPELINE_HANDLERS["$group"] = _group_stage
+
 import mongo  # noqa: E402  Must come after the client patch.
 
 

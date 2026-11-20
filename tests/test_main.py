@@ -94,6 +94,26 @@ def whenGetMetricsByActivityRoute_thenReturnsRunsOfThatWeek(client, two_weeks_of
     }
 
 
+def whenGetMetricsByActivityRoute_thenReturnsEmptyArraysForWeekWithoutRuns(client, two_weeks_of_runs):
+    # Given
+    # When
+    response = client.get("/metricsByActivity", params={"year": 2025, "week": 30, "metrics": ["distance"]})
+
+    # Then
+    assert response.status_code == 200
+    assert response.json() == {"distance": [], "startTimeLocal": []}
+
+
+def whenGetDistanceRoute_thenReturnsEmptyArraysWithoutRuns(client):
+    # Given
+    # When
+    response = client.get("/distance")
+
+    # Then
+    assert response.status_code == 200
+    assert response.json()["distance"] == []
+
+
 def whenGetMetricsByActivityRoute_thenReturnsEmptyListWithoutMetrics(client, two_weeks_of_runs):
     # Given
     # When
