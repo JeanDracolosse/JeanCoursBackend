@@ -51,7 +51,7 @@ docs/                garmin-activity-fields.md: activity fields with units
 
 ## Deployment
 
-Vercel deploys from GitHub `main` (pushing deploys). `pyproject.toml` only sets `[tool.vercel] entrypoint = "jean_cours.api.app:app"`; dependencies come from `requirements.txt`. Vercel offers Python 3.12 (default), 3.13 and 3.14, not 3.15, so `.python-version` pins 3.14. Dependency upgrades must also have wheels for that version (check with `pip install --dry-run --python-version 3.14 --only-binary=:all: --platform manylinux_2_17_x86_64 --implementation cp --target <tmp> -r requirements.txt`). Mongo credentials are Vercel environment variables, not `.env`.
+Vercel deploys from GitHub `main` (pushing deploys). `pyproject.toml` sets `[tool.vercel] entrypoint = "jean_cours.api.app:app"`. **When `pyproject.toml` exists, Vercel installs `[project].dependencies` and ignores `requirements.txt`** (a deploy without them crashed with `No module named 'fastapi'`). Keep both lists identical; `tests/test_requirements.py` checks it. Vercel offers Python 3.12 (default), 3.13 and 3.14, not 3.15, so `.python-version` pins 3.14. Dependency upgrades must also have wheels for that version (check with `pip install --dry-run --python-version 3.14 --only-binary=:all: --platform manylinux_2_17_x86_64 --implementation cp --target <tmp> -r requirements.txt`). Mongo credentials are Vercel environment variables, not `.env`.
 
 ## Comments
 
