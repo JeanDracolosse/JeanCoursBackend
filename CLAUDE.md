@@ -11,14 +11,25 @@ Python FastAPI backend that syncs running activities from Garmin Connect into Mo
 Use the project virtualenv at `.venv` (Windows layout):
 
 ```sh
-.venv/Scripts/python.exe -m pip install -r requirements.txt   # install deps
-.venv/Scripts/python.exe main.py                              # run API on 0.0.0.0:8000
-.venv/Scripts/python.exe -m uvicorn main:app --reload         # run API with autoreload
-.venv/Scripts/python.exe activity.py                          # sync Garmin -> Mongo (same as GET /garmin)
-.venv/Scripts/python.exe setWeekData.py                       # seed week types + upsert one week (edit the dict first)
+.venv/Scripts/python.exe -m pip install -r requirements-dev.txt   # install deps + test deps
+.venv/Scripts/python.exe main.py                                  # run API on 0.0.0.0:8000
+.venv/Scripts/python.exe -m uvicorn main:app --reload             # run API with autoreload
+.venv/Scripts/python.exe activity.py                              # sync Garmin -> Mongo (same as GET /garmin)
+.venv/Scripts/python.exe setWeekData.py                           # seed week types + upsert one week (edit the dict first)
+.venv/Scripts/python.exe -m pytest                                # run all tests
+.venv/Scripts/python.exe -m pytest tests/test_mongo.py::whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly   # one test
+.venv/Scripts/python.exe -m pytest -k Distance                    # tests matching a name
 ```
 
-There is no test suite, linter, or formatter configured.
+No linter or formatter is configured.
+
+## Tests
+
+- Naming: test functions are `whenMethodName_thenWhatItDoes` (`pytest.ini` collects `when*`, not `test_*`). Each test body has three sections marked `# Given`, `# When`, `# Then`; keep the comments even when a section is empty.
+- `tests/conftest.py` replaces `pymongo.MongoClient` with an in-memory mongomock client **before** `mongo` is imported, and empties all collections before each test. Tests never touch Atlas. Never import app modules in `conftest.py` above that patch.
+- mongomock lacks `$isoWeek`/`$isoWeekYear`; `conftest.py` patches them in. If a new pipeline uses another unsupported operator, mongomock raises `NotImplementedError`, so patch it there the same way.
+- Garmin is never called: tests `monkeypatch` the names imported into `activity` (`fetch_from_date`, `download_fit_from_id`) or the module-level `__garmin` / `__fetch_fit_from_id` / `Decoder` in `garmin`.
+- Known bugs are pinned by `@pytest.mark.xfail(strict=True)` tests in `tests/test_mongo.py`. Fixing a bug makes its test pass, which fails the run until the `xfail` marker is removed.
 
 ## Configuration
 
@@ -31,7 +42,7 @@ Layering: `main.py` (routes) → `mongo.py` (data access) → `aggregation.py` (
 - **Import-time side effects:** importing `mongo.py` connects to Atlas and creates collections/unique indexes (`activities.activityId`, `weekTypes.weekTypeId`, `weeks.date`). Any module importing it (including `main.py`) needs a reachable DB.
 - **Sync (`update_fit`):** reads `configuration.lastDate` (defaults to today), fetches activities since then, upserts each Garmin summary, then downloads the original FIT file and merges `workoutFeel`/`workoutRpe` into the same document, then sets `lastDate` to today. Activities are stored as the raw Garmin JSON (camelCase fields like `distance`, `hrTimeInZone_1`, `startTimeLocal` converted to `datetime`).
 - **Weekly aggregation contract:** every stats pipeline filters `activityType.typeId in [1, 6]` (running types), buckets by ISO year/week of `startTimeLocal`, sorts by the week key, then collapses to a single document of **parallel arrays** (one entry per week). `/index` returns the matching list of week start dates that serves as the x-axis. Arrays from different endpoints line up only because they use the same filter and sort, so keep them consistent when changing a pipeline.
-- **Week key gotchas:** the `_id` key is a string `"{year}_{week}"` (or `"{year}-{week}"` in `INDEX_PIPELINE`), so the `$sort` is lexicographic (`2025_10` sorts before `2025_9`), not chronological. `get_indexes` parses the ISO week with `%W`, which is not ISO week numbering.
+- **Week key gotchas:** the `_id` key is a string `"{year}_{week}"` (or `"{year}-{week}"` in `INDEX_PIPELINE`), so the `$sort` is lexicographic (`2025_10` sorts before `2025_9`), not chronological. `get_indexes` parses the ISO week with `%W` instead of `%G-%V`, so in years where Jan 1 falls Tuesday–Thursday (2025, 2026) every returned date is one week late.
 - **Dynamic metrics:** `/metricsAvgByWeek`, `/metricsSumByWeek` and `/metricsByActivity` take a repeated `metrics` query param of raw activity field names and build `$avg`/`$sum`/`$push` stages from them.
 - **Week planning:** the `weeks` collection (`date`, `weekTypeId`) is joined with `weekTypes` (`weekTypeId`, `label`: Base/Récupération/Intensive/Spécifique) by `/weekTypes`. It is populated manually through `setWeekData.py`.
 - In `main.py`, several handlers share the same Python function name (`root`, `get_metrics`). FastAPI still registers each route, but give new handlers unique names.
