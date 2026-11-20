@@ -68,9 +68,10 @@ def download_fit_from_id(client: Garmin, activity_id: str) -> dict[str, any]:
     return __read_running_fit_data_stream(activity_id, stream)
 
 
-def fetch_from_date(client: Garmin, date: date) -> None:
-    """Fetches activities since a date. Parses their times to datetimes."""
-    activity_list = client.get_activities_by_date(startdate=date.isoformat())
+def fetch_from_date(client: Garmin, date: date, until: date | None = None) -> None:
+    """Fetches activities from a date, up to `until` if given. Parses their times to datetimes."""
+    activity_list = client.get_activities_by_date(
+        startdate=date.isoformat(), enddate=until.isoformat() if until else None)
     for activity in activity_list:
         activity['startTimeLocal'] = datetime.strptime(
             activity['startTimeLocal'], "%Y-%m-%d %H:%M:%S")

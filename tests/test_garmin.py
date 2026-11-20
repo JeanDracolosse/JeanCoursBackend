@@ -130,7 +130,7 @@ class _FakeClient:
         self.fit_content = fit_content
         self.downloaded_ids = []
 
-    def get_activities_by_date(self, startdate):
+    def get_activities_by_date(self, startdate, enddate=None):
         return [{
             "activityId": 1,
             "startTimeLocal": "2025-03-03 08:00:00",

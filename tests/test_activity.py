@@ -9,7 +9,7 @@ def whenUpdateFit_thenStoresActivitiesWithFitDataAndMovesLastDateToToday(monkeyp
     mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
     requested_dates = []
 
-    def fake_fetch_from_date(client, start_date):
+    def fake_fetch_from_date(client, start_date, until=None):
         requested_dates.append(start_date)
         return [{"activityId": 1, "distance": 10000}]
 
@@ -33,7 +33,7 @@ def whenUpdateFit_thenFetchesFromSinceWhenGiven(monkeypatch):
     mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
     requested_dates = []
 
-    def fake_fetch_from_date(client, start_date):
+    def fake_fetch_from_date(client, start_date, until=None):
         requested_dates.append(start_date)
         return []
 
@@ -45,6 +45,42 @@ def whenUpdateFit_thenFetchesFromSinceWhenGiven(monkeypatch):
 
     # Then
     assert requested_dates == [date(2015, 1, 1)]
+
+
+def whenUpdateFit_thenKeepsLastDateWhenUntilIsGiven(monkeypatch):
+    # Given
+    mongo.configuration_collection.insert_one({"lastDate": "2026-11-20"})
+    requested_ranges = []
+
+    def fake_fetch_from_date(client, start_date, until=None):
+        requested_ranges.append((start_date, until))
+        return []
+
+    monkeypatch.setattr(activity, "login", lambda interactive: "client")
+    monkeypatch.setattr(activity, "fetch_from_date", fake_fetch_from_date)
+
+    # When
+    activity.update_fit(since=date(2015, 1, 1), until=date(2025, 12, 31))
+
+    # Then
+    assert requested_ranges == [(date(2015, 1, 1), date(2025, 12, 31))]
+    assert mongo.get_last_date() == date(2026, 11, 20)
+
+
+def whenUpdateFit_thenWaitsBetweenDownloadsButNotAfterTheLast(monkeypatch):
+    # Given
+    sleeps = []
+    monkeypatch.setattr(activity, "login", lambda interactive: "client")
+    monkeypatch.setattr(activity, "fetch_from_date",
+                        lambda client, start_date, until=None: [{"activityId": 1}, {"activityId": 2}, {"activityId": 3}])
+    monkeypatch.setattr(activity, "download_fit_from_id", lambda client, activity_id: {"activityId": activity_id})
+    monkeypatch.setattr(activity.time, "sleep", sleeps.append)
+
+    # When
+    activity.update_fit(delay=1.5)
+
+    # Then
+    assert sleeps == [1.5, 1.5]
 
 
 def whenUpdateFit_thenLogsInOnceForAllActivities(monkeypatch):
@@ -63,7 +99,7 @@ def whenUpdateFit_thenLogsInOnceForAllActivities(monkeypatch):
 
     monkeypatch.setattr(activity, "login", fake_login)
     monkeypatch.setattr(activity, "fetch_from_date",
-                        lambda used_client, start_date: [{"activityId": 1}, {"activityId": 2}, {"activityId": 3}])
+                        lambda used_client, start_date, until=None: [{"activityId": 1}, {"activityId": 2}, {"activityId": 3}])
     monkeypatch.setattr(activity, "download_fit_from_id", fake_download_fit_from_id)
 
     # When

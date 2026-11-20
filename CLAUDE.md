@@ -15,7 +15,8 @@ Use the project virtualenv at `.venv` (Windows layout):
 .venv/Scripts/python.exe main.py                                  # run API on 0.0.0.0:8000
 .venv/Scripts/python.exe -m uvicorn main:app --reload             # run API with autoreload
 .venv/Scripts/python.exe activity.py                              # sync Garmin -> Mongo (same as GET /garmin)
-.venv/Scripts/python.exe activity.py --since 2015-01-01           # backfill history from a date (re-runs are safe)
+.venv/Scripts/python.exe activity.py --since 2015-01-01 --until 2025-12-31   # backfill a period (re-runs are safe; --until keeps the last sync date)
+# --delay N: seconds between FIT downloads (default 1) to avoid Garmin rate limits. Running anything here touches Atlas and Garmin: ask the user first.
 .venv/Scripts/python.exe setWeekData.py                           # seed week types + upsert one week (edit the dict first)
 .venv/Scripts/python.exe -m pytest                                # run all tests
 .venv/Scripts/python.exe -m pytest tests/test_mongo.py::whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly   # one test
