@@ -18,6 +18,7 @@ Use the project virtualenv at `.venv` (Windows layout):
 .venv/Scripts/python.exe activity.py --since 2015-01-01 --until 2025-12-31   # backfill a period (re-runs are safe; --until keeps the last sync date)
 # --delay N: seconds between FIT downloads (default 1) to avoid Garmin rate limits. Running anything here touches Atlas and Garmin: ask the user first.
 .venv/Scripts/python.exe setWeekData.py                           # seed week types + upsert one week (edit the dict first)
+.venv/Scripts/python.exe setThresholds.py                         # store dated HR thresholds for hrTSS (edit the list first)
 .venv/Scripts/python.exe -m pytest                                # run all tests
 .venv/Scripts/python.exe -m pytest tests/test_mongo.py::whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly   # one test
 .venv/Scripts/python.exe -m pytest -k Distance                    # tests matching a name
@@ -55,5 +56,9 @@ Layering: `main.py` (routes) → `mongo.py` (data access) → `aggregation.py` (
   - A new weekly stat is a fields dict like `DISTANCE_FIELDS` (output name → `$project` expression, `1` for a raw field), not a new pipeline.
 - **Activity filter:** `aggregation.ActivityFilter(start, end, types)` selects the activities. Weekly routes get it from the `from`/`to`/`types` query params through the `Filter` dependency in `main.py`. Bounds are widened to whole ISO weeks. Without bounds, the range is the first to the last matching run. `types` defaults to `RUNNING_TYPES` (1, 6).
 - **Dates:** when turning a week key into a date, use ISO (`date.fromisocalendar`, `%G-%V-%u`, `week_monday`), never `%Y`/`%W`.
-- **Dynamic metrics:** `/metricsAvgByWeek`, `/metricsSumByWeek` and `/metricsByActivity` take a repeated `metrics` query param of raw activity field names. `/metricsByActivity` (one value per run, not per week) uses its own pipeline and returns empty arrays for a week without runs.
+- **Dynamic metrics:** `/metricsAvgByWeek`, `/metricsSumByWeek` and `/metricsByActivity` take a repeated `metrics` query param of raw activity field names, listed with units in `docs/garmin-activity-fields.md`. `/metricsAvgByWeek` weights each run by `duration` (`aggregation.weighted_average_fields`) and ignores runs without the metric. `/metricsByActivity` (one value per run, not per week) uses its own pipeline and returns empty arrays for a week without runs.
+- **Training load:** `/trainingLoad` (weekly) and `/trainingLoadByDay`.
+  - `training_load.py` holds the pure math: `hr_tss` (Banister TRIMP from `duration` and `averageHR`, scaled so 1 h at LTHR = 100) and `daily_load` (CTL/ATL over 42/7 days; TSB = previous day's CTL − ATL).
+  - Thresholds (`lthr`, `restingHr`, `maxHr`, `trimpA`, `trimpB`) are dated documents in `thresholds`, set by `setThresholds.py`. Each run uses the latest one on or before its day. None stored → `NoThresholds` → 409.
+  - CTL/ATL always start from the first matching run in all history (warm-up), then are sliced to the requested range. Weekly CTL/ATL/TSB are the week's last day's values, up to today.
 - **Week planning:** the `weeks` collection (`date`, `weekTypeId`) is joined with `weekTypes` (`weekTypeId`, `label`: Base/Récupération/Intensive/Spécifique) by `/weekTypes`. It is populated manually through `setWeekData.py`.

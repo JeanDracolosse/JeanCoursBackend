@@ -68,6 +68,21 @@ def weekly_pipeline(activity_filter: ActivityFilter, fields: dict, accumulator: 
     ]
 
 
+def weighted_average_fields(metric_list: list) -> dict:
+    """Builds the fields of a duration-weighted average.
+
+    Each metric gets `{metric}__weighted` (metric × duration) and `{metric}__duration`.
+    Both are 0 for a run without the metric, so it doesn't count.
+    """
+    fields = {}
+    for metric in metric_list:
+        has_metric = {"$isNumber": f"${metric}"}
+        duration = {"$ifNull": ["$duration", 0]}
+        fields[f"{metric}__weighted"] = {"$cond": [has_metric, {"$multiply": [f"${metric}", duration]}, 0]}
+        fields[f"{metric}__duration"] = {"$cond": [has_metric, duration, 0]}
+    return fields
+
+
 def date_range_pipeline(activity_filter: ActivityFilter) -> list[dict]:
     return [
         {"$match": activity_match(activity_filter)},

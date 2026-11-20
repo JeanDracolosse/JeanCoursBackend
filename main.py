@@ -1,13 +1,17 @@
 from datetime import date, datetime
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 
 from activity import update_fit
 from aggregation import RUNNING_TYPES, ActivityFilter
 from garmin import GarminLoginRequired
-from mongo import get_week_types, get_distance, get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_cumulative_metric_list_by_week, get_average_metric_list_by_week, get_power_time_in_zone
-from schemas import ActivityMetrics, DistanceWeeks, ErrorDetail, HrTimeInZoneWeeks, PowerTimeInZoneWeeks, WeeklyMetrics, WeekType
+from mongo import (NoThresholds, get_average_metric_list_by_week, get_cumulative_metric_list_by_week, get_distance,
+                   get_hr_time_in_zone, get_indexes, get_metric_list_by_activity, get_power_time_in_zone,
+                   get_training_load, get_training_load_by_day, get_week_types)
+from schemas import (ActivityMetrics, DistanceWeeks, ErrorDetail, HrTimeInZoneWeeks, PowerTimeInZoneWeeks,
+                     TrainingLoadDays, TrainingLoadWeeks, WeeklyMetrics, WeekType)
 
 app = FastAPI(
     title="Jean Cours API",
@@ -15,7 +19,16 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
+@app.exception_handler(NoThresholds)
+async def no_thresholds_handler(request: Request, error: NoThresholds):
+    return JSONResponse(status_code=409, content={"detail": str(error)})
+
+
+NO_THRESHOLDS = {409: {"model": ErrorDetail, "description": "No heart-rate threshold stored. Run `setThresholds.py`."}}
+
 WEEKLY = "Weekly stats"
+DAILY = "Daily stats"
 SYNC = "Sync"
 PLANNING = "Planning"
 
@@ -68,9 +81,23 @@ async def metrics_sum_by_week(metrics: Metrics, activity_filter: Filter):
 
 
 @app.get("/metricsAvgByWeek", tags=[WEEKLY], response_model=WeeklyMetrics,
-         summary="Average of metrics per week", description="One array per requested metric, aligned with `/index`. `null` for weeks without runs or without the field.")
+         summary="Average of metrics per week, weighted by duration",
+         description="One array per requested metric, aligned with `/index`. Each run counts in proportion to its `duration`; "
+                     "runs without the metric are ignored. `null` for weeks where no run has it.")
 async def metrics_avg_by_week(metrics: Metrics, activity_filter: Filter):
     return get_average_metric_list_by_week(metrics, activity_filter)
+
+
+@app.get("/trainingLoad", tags=[WEEKLY], response_model=TrainingLoadWeeks, responses=NO_THRESHOLDS,
+         summary="TSS, CTL, ATL and TSB per week")
+async def training_load(activity_filter: Filter):
+    return get_training_load(activity_filter)
+
+
+@app.get("/trainingLoadByDay", tags=[DAILY], response_model=TrainingLoadDays, responses=NO_THRESHOLDS,
+         summary="TSS, CTL, ATL and TSB per day")
+async def training_load_by_day(activity_filter: Filter):
+    return get_training_load_by_day(activity_filter)
 
 
 @app.get("/metricsByActivity", tags=[WEEKLY], response_model=ActivityMetrics,

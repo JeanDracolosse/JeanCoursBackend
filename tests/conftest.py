@@ -68,17 +68,17 @@ def two_weeks_of_runs():
     """
     mongo.activities_collection.insert_many([
         _activity(3, datetime(2025, 3, 10, 8), type_id=1,
-                  distance=8000, elevationGain=20, elevationLoss=20, averageHR=160,
+                  distance=8000, elevationGain=20, elevationLoss=20, averageHR=160, duration=3000,
                   hrTimeInZone_1=1, hrTimeInZone_2=2, hrTimeInZone_3=3, hrTimeInZone_4=4, hrTimeInZone_5=5,
                   powerTimeInZone_1=0, powerTimeInZone_2=0, powerTimeInZone_3=0, powerTimeInZone_4=0, powerTimeInZone_5=10),
         _activity(2, datetime(2025, 3, 5, 18), type_id=6,
-                  distance=5000, elevationGain=0, elevationLoss=0, averageHR=140,
+                  distance=5000, elevationGain=0, elevationLoss=0, averageHR=140, duration=900,
                   hrTimeInZone_1=10, hrTimeInZone_2=20, hrTimeInZone_3=30, hrTimeInZone_4=40, hrTimeInZone_5=50,
                   powerTimeInZone_1=1, powerTimeInZone_2=2, powerTimeInZone_3=3, powerTimeInZone_4=4, powerTimeInZone_5=5),
         _activity(1, datetime(2025, 3, 3, 8), type_id=1,
-                  distance=10000, elevationGain=100, elevationLoss=50, averageHR=150,
+                  distance=10000, elevationGain=100, elevationLoss=50, averageHR=150, duration=2700,
                   hrTimeInZone_1=60, hrTimeInZone_2=120, hrTimeInZone_3=180, hrTimeInZone_4=240, hrTimeInZone_5=300,
                   powerTimeInZone_1=5, powerTimeInZone_2=5, powerTimeInZone_3=5, powerTimeInZone_4=5, powerTimeInZone_5=5),
         _activity(4, datetime(2025, 3, 5, 12), type_id=2,
-                  distance=40000, elevationGain=300, elevationLoss=300, averageHR=130),
+                  distance=40000, elevationGain=300, elevationLoss=300, averageHR=130, duration=7200),
     ])

@@ -1,4 +1,5 @@
 """Response models. They define the Swagger schemas at /docs."""
+from datetime import date as date_type
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -39,6 +40,27 @@ class PowerTimeInZoneWeeks(BaseModel):
 
 WeeklyMetrics = dict[str, list[Number | None]]
 ActivityMetrics = dict[str, list[Any]]
+
+
+TSS = ("hrTSS: Banister TRIMP from duration and averageHR, scaled so 1 hour at LTHR = 100. "
+       "Thresholds come from the thresholds collection, by date.")
+LOAD = ("CTL and ATL are exponential averages of daily TSS over 42 and 7 days. TSB = previous day's CTL - ATL. "
+        "Computed from the first run in history, so the first ~6 weeks of history underestimate CTL.")
+
+
+class TrainingLoadWeeks(BaseModel):
+    tss: list[Number | None] = Field(description=f"Sum of the week's hrTSS. {TSS} {WEEKLY}")
+    ctl: list[Number | None] = Field(description=f"Fitness on the week's last day (up to today). {LOAD}")
+    atl: list[Number | None] = Field(description=f"Fatigue on the week's last day (up to today). {LOAD}")
+    tsb: list[Number | None] = Field(description=f"Form on the week's last day (up to today). {LOAD}")
+
+
+class TrainingLoadDays(BaseModel):
+    date: list[date_type] = Field(description="Every day from the Monday of the first week to the last day of the range, up to today.")
+    tss: list[Number] = Field(description=f"Sum of the day's hrTSS. {TSS}")
+    ctl: list[Number] = Field(description=f"Fitness. {LOAD}")
+    atl: list[Number] = Field(description=f"Fatigue. {LOAD}")
+    tsb: list[Number] = Field(description=f"Form. {LOAD}")
 
 
 class WeekType(BaseModel):

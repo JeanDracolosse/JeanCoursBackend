@@ -1,7 +1,10 @@
 from datetime import date, datetime
 
+import pytest
+
 import mongo
 from aggregation import ActivityFilter
+from training_load import hr_tss
 
 
 def whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly(two_weeks_of_runs):
@@ -68,7 +71,7 @@ def whenGetAverageMetricListByWeek_thenAveragesEachMetricPerWeek(two_weeks_of_ru
     result = mongo.get_average_metric_list_by_week(metrics)
 
     # Then
-    assert result == {"averageHR": [145, 160]}
+    assert result == {"averageHR": [147.5, 160]}
 
 
 def whenGetMetricListByActivity_thenReturnsRunsOfThatWeekSortedByStartTime(two_weeks_of_runs):
@@ -236,8 +239,8 @@ def whenGetDistance_thenFillsWeeksWithoutRunsWithZero():
 def whenGetAverageMetricListByWeek_thenFillsWeeksWithoutRunsWithNull():
     # Given
     mongo.activities_collection.insert_many([
-        _run(1, datetime(2025, 3, 3, 8), averageHR=150),
-        _run(2, datetime(2025, 3, 19, 8), averageHR=160),
+        _run(1, datetime(2025, 3, 3, 8), averageHR=150, duration=3600),
+        _run(2, datetime(2025, 3, 19, 8), averageHR=160, duration=3600),
     ])
 
     # When
@@ -280,6 +283,86 @@ def whenGetDistance_thenUsesRequestedActivityTypes(two_weeks_of_runs):
 
     # Then
     assert result["distance"] == [40000]
+
+
+def whenGetAverageMetricListByWeek_thenWeightsRunsByDuration():
+    # Given
+    mongo.activities_collection.insert_many([
+        _run(1, datetime(2025, 3, 3, 8), averageHR=150, duration=1800),
+        _run(2, datetime(2025, 3, 4, 8), averageHR=160, duration=7200),
+    ])
+
+    # When
+    result = mongo.get_average_metric_list_by_week(["averageHR"])
+
+    # Then
+    assert result == {"averageHR": [158]}
+
+
+def whenGetAverageMetricListByWeek_thenIgnoresRunsWithoutTheMetric():
+    # Given
+    mongo.activities_collection.insert_many([
+        _run(1, datetime(2025, 3, 3, 8), averageHR=150, duration=1800),
+        _run(2, datetime(2025, 3, 4, 8), duration=7200),
+    ])
+
+    # When
+    result = mongo.get_average_metric_list_by_week(["averageHR"])
+
+    # Then
+    assert result == {"averageHR": [150]}
+
+
+def whenGetAverageMetricListByWeek_thenReturnsNullForWeekWhereNoRunHasTheMetric():
+    # Given
+    mongo.activities_collection.insert_many([
+        _run(1, datetime(2025, 3, 3, 8), duration=1800),
+    ])
+
+    # When
+    result = mongo.get_average_metric_list_by_week(["averageHR"])
+
+    # Then
+    assert result == {"averageHR": [None]}
+
+
+THRESHOLD = {"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92}
+
+
+def whenGetTrainingLoad_thenIsAlignedWithIndexes(two_weeks_of_runs):
+    # Given
+    mongo.upsert_threshold(THRESHOLD)
+    threshold = mongo.get_thresholds()[0]
+
+    # When
+    result = mongo.get_training_load()
+
+    # Then
+    assert len(result["tss"]) == len(mongo.get_indexes()) == 2
+    assert result["tss"][0] == pytest.approx(hr_tss(2700, 150, threshold) + hr_tss(900, 140, threshold))
+    assert result["tss"][1] == pytest.approx(hr_tss(3000, 160, threshold))
+
+
+def whenGetTrainingLoadByDay_thenWarmsUpCtlFromRunsBeforeTheRange(two_weeks_of_runs):
+    # Given
+    mongo.upsert_threshold(THRESHOLD)
+
+    # When
+    result = mongo.get_training_load_by_day(ActivityFilter(start=date(2025, 3, 10), end=date(2025, 3, 16)))
+
+    # Then
+    assert result["date"][0] == date(2025, 3, 10)
+    assert len(result["date"]) == 7
+    assert result["ctl"][0] > 0
+
+
+def whenGetTrainingLoad_thenRaisesWithoutThresholds(two_weeks_of_runs):
+    # Given
+    # When
+    with pytest.raises(mongo.NoThresholds):
+        mongo.get_training_load()
+
+    # Then
 
 
 def whenGetMetricListByActivity_thenDoesNotChangeTheMetricList(two_weeks_of_runs):

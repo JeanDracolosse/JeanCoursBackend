@@ -97,7 +97,7 @@ def whenGetMetricsAvgByWeekRoute_thenAveragesEveryRequestedMetric(client, two_we
 
     # Then
     assert response.status_code == 200
-    assert response.json() == {"averageHR": [145, 160]}
+    assert response.json() == {"averageHR": [147.5, 160]}
 
 
 def whenGetMetricsAvgByWeekRoute_thenRejectsRequestWithoutMetrics(client):
@@ -160,6 +160,42 @@ def whenGetMetricsByActivityRoute_thenRejectsRequestWithoutWeek(client):
     assert response.status_code == 422
 
 
+def whenGetTrainingLoadRoute_thenReturnsWeeklyLoad(client, two_weeks_of_runs):
+    # Given
+    mongo.upsert_threshold({"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92})
+
+    # When
+    response = client.get("/trainingLoad")
+
+    # Then
+    assert response.status_code == 200
+    assert set(response.json()) == {"tss", "ctl", "atl", "tsb"}
+    assert len(response.json()["ctl"]) == 2
+
+
+def whenGetTrainingLoadByDayRoute_thenReturnsOneValuePerDay(client, two_weeks_of_runs):
+    # Given
+    mongo.upsert_threshold({"date": "2025-01-01", "lthr": 170, "restingHr": 50, "maxHr": 190, "trimpA": 0.64, "trimpB": 1.92})
+
+    # When
+    response = client.get("/trainingLoadByDay")
+
+    # Then
+    assert response.status_code == 200
+    assert response.json()["date"][0] == "2025-03-03"
+    assert len(response.json()["date"]) == 14
+
+
+def whenGetTrainingLoadRoute_thenReturns409WithoutThresholds(client, two_weeks_of_runs):
+    # Given
+    # When
+    response = client.get("/trainingLoad")
+
+    # Then
+    assert response.status_code == 409
+    assert "setThresholds.py" in response.json()["detail"]
+
+
 def whenGetOpenApi_thenDocumentsEveryRouteWithSchemas(client):
     # Given
     # When
@@ -169,7 +205,8 @@ def whenGetOpenApi_thenDocumentsEveryRouteWithSchemas(client):
     assert response.status_code == 200
     spec = response.json()
     assert set(spec["paths"]) == {"/index", "/distance", "/hrTimeInZone", "/powerTimeInZone", "/metricsSumByWeek",
-                                  "/metricsAvgByWeek", "/metricsByActivity", "/weekTypes", "/garmin"}
+                                  "/metricsAvgByWeek", "/metricsByActivity", "/weekTypes", "/garmin",
+                                  "/trainingLoad", "/trainingLoadByDay"}
     assert "DistanceWeeks" in spec["components"]["schemas"]
 
 

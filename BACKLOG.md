@@ -8,6 +8,7 @@ One topic at a time. Move an item to Done when it's committed.
 
 ## Later
 
+- [ ] Backfill before 2025 (optional): `activity.py --since 2015-01-01 --until 2024-12-31`
 - [ ] `groupBy=month|season` (week only for now)
 - [ ] Define "season" (calendar year, race to race, or custom dates in Mongo?)
 
@@ -21,7 +22,7 @@ One topic at a time. Move an item to Done when it's committed.
 
 ## To discuss
 
-- [ ] New metrics: which ones?
+- [ ] More metrics beyond TSS/CTL/ATL/TSB? (ideas: runs per week, longest run, pace, zone share, efficiency)
 - [ ] Skill "add or edit a metric": build it after doing 1-2 metrics by hand
 - [ ] More Garmin data (sleep, HRV, resting HR, stress, Body Battery, weight)
 - [ ] MCP server over the training data
@@ -53,3 +54,7 @@ One topic at a time. Move an item to Done when it's committed.
 - [x] `from` / `to` date range on weekly endpoints
 - [x] Activity types as a parameter (`types`, default running 1 and 6)
 - [x] `get_metric_list_by_activity` no longer mutates the caller's list
+- [x] Backfill done for 2025 (321 activities) and 2026 (219)
+- [x] `/metricsAvgByWeek` weighted by duration
+- [x] hrTSS, CTL, ATL, TSB (`/trainingLoad`, `/trainingLoadByDay`)
+- [x] Activity field list: `docs/garmin-activity-fields.md`
