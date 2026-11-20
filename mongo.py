@@ -5,9 +5,11 @@ from pymongo.collection import Collection
 
 import os
 from dotenv import load_dotenv
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 
-from aggregation import DISTANCE_PIPELINE, HR_TIME_IN_ZONE_PIPELINE, INDEX_PIPELINE, POWER_TIME_IN_ZONE_PIPELINE, get_metric_list_pipeline_by_week, get_metric_list_pipeline_by_week, get_metric_list_pipeline_by_activity, get_week_types_pipeline
+from aggregation import (DISTANCE_FIELDS, HR_TIME_IN_ZONE_FIELDS, POWER_TIME_IN_ZONE_FIELDS, RUNNING_TYPES, ActivityFilter,
+                         date_range_pipeline, get_metric_list_pipeline_by_activity, get_week_types_pipeline, week_monday,
+                         weekly_pipeline)
 
 load_dotenv()
 
@@ -69,52 +71,74 @@ def set_last_date() -> None:
 # Aggregations
 
 
-def get_indexes() -> None:
-    return [datetime.strptime(f"{index['_id']['year']}-{index['_id']['week']}-1", "%G-%V-%u") for index in __aggregate_activities_pipeline(INDEX_PIPELINE)]
+def get_indexes(activity_filter: ActivityFilter = ActivityFilter()) -> list[datetime]:
+    """Returns the Monday of every week in the range, including weeks without runs."""
+    return [datetime.combine(monday, time.min) for monday in __weeks(activity_filter)]
 
 
-def get_hr_time_in_zone() -> None:
-    return __aggregate_arrays(HR_TIME_IN_ZONE_PIPELINE)
+def get_hr_time_in_zone(activity_filter: ActivityFilter = ActivityFilter()) -> dict:
+    return __weekly_arrays(activity_filter, HR_TIME_IN_ZONE_FIELDS)
 
 
-def get_power_time_in_zone() -> None:
-    return __aggregate_arrays(POWER_TIME_IN_ZONE_PIPELINE)
+def get_power_time_in_zone(activity_filter: ActivityFilter = ActivityFilter()) -> dict:
+    return __weekly_arrays(activity_filter, POWER_TIME_IN_ZONE_FIELDS)
 
 
-def get_distance() -> None:
-    return __aggregate_arrays(DISTANCE_PIPELINE)
+def get_distance(activity_filter: ActivityFilter = ActivityFilter()) -> dict:
+    return __weekly_arrays(activity_filter, DISTANCE_FIELDS)
 
 
-def __aggregate_activities_pipeline(pipeline: dict) -> dict:
-    cursor = activities_collection.aggregate(pipeline)
-    return [data for data in cursor]
+def get_cumulative_metric_list_by_week(metric_list: list, activity_filter: ActivityFilter = ActivityFilter()) -> dict:
+    return __weekly_arrays(activity_filter, {metric: 1 for metric in metric_list})
 
 
-def __aggregate_arrays(pipeline: list[dict]) -> dict:
-    """Runs a pipeline that collapses into one document of arrays.
+def get_average_metric_list_by_week(metric_list: list, activity_filter: ActivityFilter = ActivityFilter()) -> dict:
+    return __weekly_arrays(activity_filter, {metric: 1 for metric in metric_list}, "$avg", empty=None)
 
-    $group returns nothing when no activity matches. Returns empty arrays then.
+
+def get_metric_list_by_activity(year: int, week: int, metric_list: list, types: tuple[int, ...] = RUNNING_TYPES) -> dict:
+    metrics = list(metric_list)
+    if "startTimeLocal" not in metrics:
+        metrics.append("startTimeLocal")
+    results = list(activities_collection.aggregate(get_metric_list_pipeline_by_activity(year, week, metrics, types)))
+    if not results:
+        return {metric: [] for metric in metrics}
+    results[0].pop("_id")
+    return results[0]
+
+
+def __weeks(activity_filter: ActivityFilter) -> list[date]:
+    """Lists the Monday of every week in the range.
+
+    A missing bound is taken from the first or last matching run.
     """
-    results = __aggregate_activities_pipeline(pipeline)
-    if results:
-        results[0].pop("_id", None)
-        return results[0]
-    last_group = next(stage["$group"] for stage in reversed(pipeline) if "$group" in stage)
-    return {field: [] for field in last_group if field != "_id"}
+    start, end = activity_filter.start, activity_filter.end
+    if start is None or end is None:
+        runs = list(activities_collection.aggregate(date_range_pipeline(activity_filter)))
+        if runs:
+            start = start or runs[0]["first"].date()
+            end = end or runs[0]["last"].date()
+        start, end = start or end, end or start
+    if start is None:
+        return []
+
+    mondays = []
+    monday = week_monday(start)
+    while monday <= end:
+        mondays.append(monday)
+        monday += timedelta(days=7)
+    return mondays
 
 
-def get_cumulative_metric_list_by_week(metric_list: list) -> None:
-    return __aggregate_arrays(get_metric_list_pipeline_by_week(metric_list, "sum"))
+def __weekly_arrays(activity_filter: ActivityFilter, fields: dict, accumulator: str = "$sum", empty=0) -> dict:
+    """Returns one array per field, one value per week in the range.
 
-
-def get_average_metric_list_by_week(metric_list: list) -> None:
-    return __aggregate_arrays(get_metric_list_pipeline_by_week(metric_list, "avg"))
-
-
-def get_metric_list_by_activity(year: int, week: int, metric_list: list) -> None:
-    if "startTimeLocal" not in metric_list:
-        metric_list.append("startTimeLocal")
-    return __aggregate_arrays(get_metric_list_pipeline_by_activity(year, week, metric_list))
+    Weeks without runs get `empty`.
+    """
+    pipeline = weekly_pipeline(activity_filter, fields, accumulator)
+    by_week = {(doc["_id"]["year"], doc["_id"]["week"]): doc for doc in activities_collection.aggregate(pipeline)}
+    weeks = [tuple(monday.isocalendar())[:2] for monday in __weeks(activity_filter)]
+    return {field: [by_week[week].get(field, empty) if week in by_week else empty for week in weeks] for field in fields}
 
 def get_week_types() -> dict:
     cursor = week_collection.aggregate(get_week_types_pipeline())

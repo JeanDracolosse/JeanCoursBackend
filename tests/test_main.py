@@ -21,6 +21,35 @@ def whenGetDistanceRoute_thenReturnsWeeklyDistance(client, two_weeks_of_runs):
     assert response.json()["distance"] == [15000, 8000]
 
 
+def whenGetDistanceRoute_thenAcceptsFromAndTo(client, two_weeks_of_runs):
+    # Given
+    # When
+    response = client.get("/distance", params={"from": "2025-03-10", "to": "2025-03-16"})
+
+    # Then
+    assert response.status_code == 200
+    assert response.json()["distance"] == [8000]
+
+
+def whenGetDistanceRoute_thenRejectsFromAfterTo(client):
+    # Given
+    # When
+    response = client.get("/distance", params={"from": "2025-03-16", "to": "2025-03-10"})
+
+    # Then
+    assert response.status_code == 422
+
+
+def whenGetDistanceRoute_thenAcceptsActivityTypes(client, two_weeks_of_runs):
+    # Given
+    # When
+    response = client.get("/distance", params={"types": [2]})
+
+    # Then
+    assert response.status_code == 200
+    assert response.json()["distance"] == [40000]
+
+
 def whenGetHrTimeInZoneRoute_thenReturnsWeeklyZones(client, two_weeks_of_runs):
     # Given
     # When

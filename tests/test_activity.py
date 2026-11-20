@@ -28,6 +28,25 @@ def whenUpdateFit_thenStoresActivitiesWithFitDataAndMovesLastDateToToday(monkeyp
     assert mongo.get_last_date() == date.today()
 
 
+def whenUpdateFit_thenFetchesFromSinceWhenGiven(monkeypatch):
+    # Given
+    mongo.configuration_collection.insert_one({"lastDate": "2025-03-01"})
+    requested_dates = []
+
+    def fake_fetch_from_date(client, start_date):
+        requested_dates.append(start_date)
+        return []
+
+    monkeypatch.setattr(activity, "login", lambda interactive: "client")
+    monkeypatch.setattr(activity, "fetch_from_date", fake_fetch_from_date)
+
+    # When
+    activity.update_fit(since=date(2015, 1, 1))
+
+    # Then
+    assert requested_dates == [date(2015, 1, 1)]
+
+
 def whenUpdateFit_thenLogsInOnceForAllActivities(monkeypatch):
     # Given
     logins = []

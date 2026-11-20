@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 Number = int | float
 
-WEEKLY = "One value per week, aligned with /index."
+WEEKLY = "One value per week, aligned with /index. Weeks without runs are 0."
 
 
 class DistanceWeeks(BaseModel):

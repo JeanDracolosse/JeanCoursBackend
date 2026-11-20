@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 import mongo
+from aggregation import ActivityFilter
 
 
 def whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly(two_weeks_of_runs):
@@ -188,16 +189,108 @@ def whenGetDistance_thenWeeksAreInChronologicalOrder():
 def whenGetIndexes_thenWeeksAreInChronologicalOrderAcrossYears():
     # Given
     mongo.activities_collection.insert_many([
-        {"activityId": 1, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2026, 3, 2, 8)},
+        {"activityId": 1, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2026, 1, 5, 8)},
         {"activityId": 2, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 12, 22, 8)},
-        {"activityId": 3, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2026, 1, 5, 8)},
+        {"activityId": 3, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 12, 31, 8)},
     ])
 
     # When
     result = mongo.get_indexes()
 
     # Then
-    assert result == [datetime(2025, 12, 22), datetime(2026, 1, 5), datetime(2026, 3, 2)]
+    assert result == [datetime(2025, 12, 22), datetime(2025, 12, 29), datetime(2026, 1, 5)]
+
+
+def _run(activity_id, start, type_id=1, **fields):
+    return {"activityId": activity_id, "activityType": {"typeId": type_id}, "startTimeLocal": start, **fields}
+
+
+def whenGetIndexes_thenListsWeeksWithoutRuns():
+    # Given
+    mongo.activities_collection.insert_many([
+        _run(1, datetime(2025, 3, 3, 8)),
+        _run(2, datetime(2025, 3, 19, 8)),
+    ])
+
+    # When
+    result = mongo.get_indexes()
+
+    # Then
+    assert result == [datetime(2025, 3, 3), datetime(2025, 3, 10), datetime(2025, 3, 17)]
+
+
+def whenGetDistance_thenFillsWeeksWithoutRunsWithZero():
+    # Given
+    mongo.activities_collection.insert_many([
+        _run(1, datetime(2025, 3, 3, 8), distance=10000, elevationGain=0, elevationLoss=0),
+        _run(2, datetime(2025, 3, 19, 8), distance=8000, elevationGain=0, elevationLoss=0),
+    ])
+
+    # When
+    result = mongo.get_distance()
+
+    # Then
+    assert result["distance"] == [10000, 0, 8000]
+
+
+def whenGetAverageMetricListByWeek_thenFillsWeeksWithoutRunsWithNull():
+    # Given
+    mongo.activities_collection.insert_many([
+        _run(1, datetime(2025, 3, 3, 8), averageHR=150),
+        _run(2, datetime(2025, 3, 19, 8), averageHR=160),
+    ])
+
+    # When
+    result = mongo.get_average_metric_list_by_week(["averageHR"])
+
+    # Then
+    assert result == {"averageHR": [150, None, 160]}
+
+
+def whenGetDistance_thenOnlyCountsRunsInsideTheRange(two_weeks_of_runs):
+    # Given
+    activity_filter = ActivityFilter(start=date(2025, 3, 12), end=date(2025, 3, 12))
+
+    # When
+    result = mongo.get_distance(activity_filter)
+
+    # Then
+    assert result["distance"] == [8000]
+
+
+def whenGetDistance_thenZeroFillsTheWholeRequestedRange(two_weeks_of_runs):
+    # Given
+    activity_filter = ActivityFilter(start=date(2025, 2, 24), end=date(2025, 3, 17))
+
+    # When
+    distance = mongo.get_distance(activity_filter)
+    indexes = mongo.get_indexes(activity_filter)
+
+    # Then
+    assert distance["distance"] == [0, 15000, 8000, 0]
+    assert indexes == [datetime(2025, 2, 24), datetime(2025, 3, 3), datetime(2025, 3, 10), datetime(2025, 3, 17)]
+
+
+def whenGetDistance_thenUsesRequestedActivityTypes(two_weeks_of_runs):
+    # Given
+    activity_filter = ActivityFilter(types=(2,))
+
+    # When
+    result = mongo.get_distance(activity_filter)
+
+    # Then
+    assert result["distance"] == [40000]
+
+
+def whenGetMetricListByActivity_thenDoesNotChangeTheMetricList(two_weeks_of_runs):
+    # Given
+    metrics = ["distance"]
+
+    # When
+    mongo.get_metric_list_by_activity(2025, 10, metrics)
+
+    # Then
+    assert metrics == ["distance"]
 
 
 def whenGetWeekTypes_thenReturnsEachWeekWithItsTypeLabel():

@@ -6,14 +6,10 @@ One topic at a time. Move an item to Done when it's committed.
 
 - [ ] Pick the next topic
 
-## Data foundation (needed for season graphs)
+## Later
 
-- [ ] Backfill full Garmin history (first sync only fetches today)
-- [ ] Zero-fill weeks without runs so rest weeks show on graphs
-- [ ] `from` / `to` date range on stats endpoints
-- [ ] One `groupBy=week|month|season` parameter instead of week-only pipelines
+- [ ] `groupBy=month|season` (week only for now)
 - [ ] Define "season" (calendar year, race to race, or custom dates in Mongo?)
-- [ ] Activity types as a parameter (today hardcoded to running: 1, 6)
 
 ## Graph ideas
 
@@ -37,8 +33,8 @@ One topic at a time. Move an item to Done when it's committed.
 - [ ] `POST /weeks` to set week types from the frontend (replaces editing `setWeekData.py`)
 - [ ] Security: API is open on `0.0.0.0` with no auth (fine at home, not if deployed)
 - [ ] Unique indexes only created on empty collections (`mongo.py` `__get_or_create_collection`)
-- [ ] `get_metric_list_by_activity` mutates the caller's list
-- [ ] Wrong type hints (`-> None` on functions that return data)
+- [ ] Importing `mongo` connects to Atlas, so even `activity.py --help` needs the database
+- [ ] Wrong type hints (`-> None` on some functions that return data)
 
 ## Done
 
@@ -52,3 +48,8 @@ One topic at a time. Move an item to Done when it's committed.
 - [x] Swagger: response schemas, units, tags (`/docs`)
 - [x] `"_id": null` removed from weekly responses
 - [x] `/metricsByActivity`: `week` and `metrics` required (422 instead of `[]`)
+- [x] History backfill: `activity.py --since YYYY-MM-DD`
+- [x] Weeks without runs zero-filled
+- [x] `from` / `to` date range on weekly endpoints
+- [x] Activity types as a parameter (`types`, default running 1 and 6)
+- [x] `get_metric_list_by_activity` no longer mutates the caller's list
