@@ -1,3 +1,8 @@
+# Weekly pipelines group on this numeric key and sort on it, so every
+# endpoint returns its per-week arrays in the same chronological order.
+WEEK_GROUP_ID = {"year": "$year", "week": "$week"}
+SORT_BY_WEEK = {"$sort": {"_id.year": 1, "_id.week": 1}}
+
 INDEX_PIPELINE = [
     {
         "$match": {
@@ -16,23 +21,10 @@ INDEX_PIPELINE = [
     },
     {
         "$group": {
-            "_id": {
-                "$concat": [
-                  {
-                      "$toString": "$year"
-                  },
-                    "-",
-                    {"$toString": "$week"
-                     }
-                ]
-            }
+            "_id": WEEK_GROUP_ID
         }
     },
-    {
-        "$sort": {
-            "_id": 1
-        }
-    }
+    SORT_BY_WEEK
 ]
 
 HR_TIME_IN_ZONE_PIPELINE = [
@@ -58,17 +50,7 @@ HR_TIME_IN_ZONE_PIPELINE = [
     },
     {
         "$group": {
-            "_id": {
-                "$concat": [
-                    {
-                        "$toString": "$year"
-                    },
-                    "_",
-                    {
-                        "$toString": "$week"
-                    }
-                ]
-            },
+            "_id": WEEK_GROUP_ID,
             "hrTimeInZone_1": {
                 "$sum": "$hrTimeInZone_1"
             },
@@ -86,12 +68,7 @@ HR_TIME_IN_ZONE_PIPELINE = [
             }
         }
     },
-    {
-        "$sort":
-            {
-                "_id": 1
-            }
-    },
+    SORT_BY_WEEK,
     {
         "$group": {
             "_id": None,
@@ -142,17 +119,7 @@ POWER_TIME_IN_ZONE_PIPELINE = [
     },
     {
         "$group": {
-            "_id": {
-                "$concat": [
-                    {
-                        "$toString": "$year"
-                    },
-                    "_",
-                    {
-                        "$toString": "$week"
-                    }
-                ]
-            },
+            "_id": WEEK_GROUP_ID,
             "powerTimeInZone_1": {
                 "$sum": "$powerTimeInZone_1"
             },
@@ -170,12 +137,7 @@ POWER_TIME_IN_ZONE_PIPELINE = [
             }
         }
     },
-    {
-        "$sort":
-            {
-                "_id": 1
-            }
-    },
+    SORT_BY_WEEK,
     {
         "$group": {
             "_id": None,
@@ -243,17 +205,7 @@ DISTANCE_PIPELINE = [
     },
     {
         "$group": {
-            "_id": {
-                "$concat": [
-                  {
-                      "$toString": "$year"
-                  },
-                    "_",
-                    {
-                      "$toString": "$week"
-                  }
-                ]
-            },
+            "_id": WEEK_GROUP_ID,
             "distance": {
                 "$sum": "$distance"
             },
@@ -271,11 +223,7 @@ DISTANCE_PIPELINE = [
             }
         }
     },
-    {
-        "$sort": {
-            "_id": 1
-        }
-    },
+    SORT_BY_WEEK,
     {
         "$group": {
             "_id": None,
@@ -320,27 +268,13 @@ def get_metric_list_pipeline_by_week(metric_list: list, aggregation: str) -> lis
         },
         {
             "$group": {
-                "_id": {
-                    "$concat": [
-                        {
-                            "$toString": "$year"
-                        },
-                        "_",
-                        {
-                            "$toString": "$week"
-                        }
-                    ]
-                },
+                "_id": WEEK_GROUP_ID,
                 **{metric: {
                     f"${aggregation}": f"${metric}"
                 } for metric in metric_list}
             }
         },
-        {
-            "$sort": {
-                "_id": 1
-            }
-        },
+        SORT_BY_WEEK,
         {
             "$group": {
                 "_id": None,

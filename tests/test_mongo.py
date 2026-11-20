@@ -1,7 +1,5 @@
 from datetime import date, datetime
 
-import pytest
-
 import mongo
 
 
@@ -97,7 +95,6 @@ def whenGetIndexes_thenReturnsOneEntryPerWeekWithRuns(two_weeks_of_runs):
     assert len(result) == 2
 
 
-@pytest.mark.xfail(strict=True, reason="get_indexes parses ISO weeks with %W instead of %G-%V")
 def whenGetIndexes_thenReturnsMondayOfEachIsoWeek(two_weeks_of_runs):
     # Given
     # When
@@ -107,7 +104,18 @@ def whenGetIndexes_thenReturnsMondayOfEachIsoWeek(two_weeks_of_runs):
     assert result == [datetime(2025, 3, 3), datetime(2025, 3, 10)]
 
 
-@pytest.mark.xfail(strict=True, reason="weeks are sorted on the string key '{year}_{week}', so week 10 comes before week 9")
+def whenGetIndexes_thenUsesIsoYearForWeeksSpanningNewYear():
+    # Given
+    mongo.activities_collection.insert_one(
+        {"activityId": 1, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 12, 31, 8)})
+
+    # When
+    result = mongo.get_indexes()
+
+    # Then
+    assert result == [datetime(2025, 12, 29)]
+
+
 def whenGetDistance_thenWeeksAreInChronologicalOrder():
     # Given
     mongo.activities_collection.insert_many([
@@ -122,6 +130,21 @@ def whenGetDistance_thenWeeksAreInChronologicalOrder():
 
     # Then
     assert result["distance"] == [9000, 10000]
+
+
+def whenGetIndexes_thenWeeksAreInChronologicalOrderAcrossYears():
+    # Given
+    mongo.activities_collection.insert_many([
+        {"activityId": 1, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2026, 3, 2, 8)},
+        {"activityId": 2, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2025, 12, 22, 8)},
+        {"activityId": 3, "activityType": {"typeId": 1}, "startTimeLocal": datetime(2026, 1, 5, 8)},
+    ])
+
+    # When
+    result = mongo.get_indexes()
+
+    # Then
+    assert result == [datetime(2025, 12, 22), datetime(2026, 1, 5), datetime(2026, 3, 2)]
 
 
 def whenGetWeekTypes_thenReturnsEachWeekWithItsTypeLabel():

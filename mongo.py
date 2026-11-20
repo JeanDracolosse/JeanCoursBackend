@@ -70,7 +70,7 @@ def set_last_date() -> None:
 
 
 def get_indexes() -> None:
-    return [datetime.strptime(index['_id'] + '-1', "%Y-%W-%w") for index in __aggregate_activities_pipeline(INDEX_PIPELINE)]
+    return [datetime.strptime(f"{index['_id']['year']}-{index['_id']['week']}-1", "%G-%V-%u") for index in __aggregate_activities_pipeline(INDEX_PIPELINE)]
 
 
 def get_hr_time_in_zone() -> None:
