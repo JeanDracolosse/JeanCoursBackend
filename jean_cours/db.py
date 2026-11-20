@@ -1,10 +1,13 @@
-"""MongoDB connection, collections and writes. Connects on import."""
+"""MongoDB connection, collections and writes.
+
+Importing this module only resolves the cluster's DNS record (mongodb+srv).
+pymongo connects on the first query. Nothing is written at import.
+"""
 import os
 from datetime import date
 
 from dotenv import load_dotenv
 from pymongo import ASCENDING, MongoClient
-from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.server_api import ServerApi
 
@@ -17,20 +20,28 @@ def _get_database() -> Database:
     return MongoClient(uri, server_api=ServerApi("1")).jeanCours
 
 
-def _collection(name: str, unique_field: str | None = None) -> Collection:
-    collection = database.get_collection(name)
-    if unique_field:
-        # Idempotent: a no-op when the index already exists.
-        collection.create_index([(unique_field, ASCENDING)], unique=True)
-    return collection
-
-
 database = _get_database()
-activities_collection = _collection("activities", "activityId")
-configuration_collection = _collection("configuration")
-week_type_collection = _collection("weekTypes", "weekTypeId")
-week_collection = _collection("weeks", "date")
-threshold_collection = _collection("thresholds", "date")
+activities_collection = database.get_collection("activities")
+configuration_collection = database.get_collection("configuration")
+week_type_collection = database.get_collection("weekTypes")
+week_collection = database.get_collection("weeks")
+threshold_collection = database.get_collection("thresholds")
+
+UNIQUE_INDEXES = {
+    activities_collection: "activityId",
+    week_type_collection: "weekTypeId",
+    week_collection: "date",
+    threshold_collection: "date",
+}
+
+
+def ensure_indexes() -> None:
+    """Creates the unique indexes. Needs write access, so the read-only web API never calls it.
+
+    Idempotent: existing indexes are left as they are.
+    """
+    for collection, field in UNIQUE_INDEXES.items():
+        collection.create_index([(field, ASCENDING)], unique=True)
 
 
 def upsert_activity(activity: dict) -> None:

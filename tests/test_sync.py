@@ -83,6 +83,21 @@ def whenUpdateFit_thenWaitsBetweenDownloadsButNotAfterTheLast(monkeypatch):
     assert sleeps == [1.5, 1.5]
 
 
+def whenUpdateFit_thenEnsuresUniqueIndexes(monkeypatch):
+    # Given
+    db.activities_collection.drop_indexes()
+    monkeypatch.setattr(activity, "login", lambda interactive: "client")
+    monkeypatch.setattr(activity, "fetch_from_date", lambda client, start_date, until=None: [])
+
+    # When
+    activity.update_fit()
+
+    # Then
+    unique_keys = {key for info in db.activities_collection.index_information().values()
+                   if info.get("unique") for key, _ in info["key"]}
+    assert unique_keys == {"activityId"}
+
+
 def whenUpdateFit_thenLogsInOnceForAllActivities(monkeypatch):
     # Given
     logins = []
