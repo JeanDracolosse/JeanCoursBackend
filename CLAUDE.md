@@ -18,7 +18,7 @@ Use the project virtualenv at `.venv` (Windows layout):
 .venv/Scripts/python.exe activity.py --since 2015-01-01 --until 2025-12-31   # backfill a period (re-runs are safe; --until keeps the last sync date)
 # --delay N: seconds between FIT downloads (default 1) to avoid Garmin rate limits. Running anything here touches Atlas and Garmin: ask the user first.
 .venv/Scripts/python.exe setWeekData.py                           # seed week types + upsert one week (edit the dict first)
-.venv/Scripts/python.exe setThresholds.py                         # store dated HR thresholds for hrTSS (edit the list first)
+.venv/Scripts/python.exe setThresholds.py                         # store the HR threshold from .env for hrTSS (writes Atlas: ask first)
 .venv/Scripts/python.exe -m pytest                                # run all tests
 .venv/Scripts/python.exe -m pytest tests/test_mongo.py::whenGetDistance_thenSumsDistanceAndEffortPerWeekForRunsOnly   # one test
 .venv/Scripts/python.exe -m pytest -k Distance                    # tests matching a name
@@ -40,7 +40,7 @@ Google-style docstrings (`Args:`, `Returns:`, `Raises:`). Comment only when the 
 
 ## Configuration
 
-`.env` (gitignored) must define `MONGO_USERNAME`, `MONGO_PASSWORD`, `MONGO_URL`, `MONGO_APP_NAME`, `GARMIN_MAIL`, `GARMIN_PASSWORD`. Garmin session tokens are cached in `ressources/token` (sensitive; gitignored). garth renews the short-lived OAuth2 token from the saved OAuth1 token automatically; only when the tokens are missing or rejected (`FileNotFoundError`, `GarminConnectAuthenticationError`) does `garmin.login` fall back to email/password. Network and rate-limit errors propagate and never trigger a password login. If Garmin then asks for an MFA code, only the terminal run (`activity.py`, `interactive=True`) prompts; `GET /garmin` raises `GarminLoginRequired`, returned as 401.
+`.env` (gitignored) must define `MONGO_USERNAME`, `MONGO_PASSWORD`, `MONGO_URL`, `MONGO_APP_NAME`, `GARMIN_MAIL`, `GARMIN_PASSWORD`, and for `setThresholds.py` `THRESHOLD_DATE`, `LTHR`, `RESTING_HR`, `MAX_HR`, `TRIMP_A`, `TRIMP_B`. Keep personal values (thresholds included) in `.env`, never in committed files. Garmin session tokens are cached in `ressources/token` (sensitive; gitignored). garth renews the short-lived OAuth2 token from the saved OAuth1 token automatically; only when the tokens are missing or rejected (`FileNotFoundError`, `GarminConnectAuthenticationError`) does `garmin.login` fall back to email/password. Network and rate-limit errors propagate and never trigger a password login. If Garmin then asks for an MFA code, only the terminal run (`activity.py`, `interactive=True`) prompts; `GET /garmin` raises `GarminLoginRequired`, returned as 401.
 
 ## Architecture
 
@@ -59,6 +59,6 @@ Layering: `main.py` (routes) → `mongo.py` (data access) → `aggregation.py` (
 - **Dynamic metrics:** `/metricsAvgByWeek`, `/metricsSumByWeek` and `/metricsByActivity` take a repeated `metrics` query param of raw activity field names, listed with units in `docs/garmin-activity-fields.md`. `/metricsAvgByWeek` weights each run by `duration` (`aggregation.weighted_average_fields`) and ignores runs without the metric. `/metricsByActivity` (one value per run, not per week) uses its own pipeline and returns empty arrays for a week without runs.
 - **Training load:** `/trainingLoad` (weekly) and `/trainingLoadByDay`.
   - `training_load.py` holds the pure math: `hr_tss` (Banister TRIMP from `duration` and `averageHR`, scaled so 1 h at LTHR = 100) and `daily_load` (CTL/ATL over 42/7 days; TSB = previous day's CTL − ATL).
-  - Thresholds (`lthr`, `restingHr`, `maxHr`, `trimpA`, `trimpB`) are dated documents in `thresholds`, set by `setThresholds.py`. Each run uses the latest one on or before its day. None stored → `NoThresholds` → 409.
+  - Thresholds (`lthr`, `restingHr`, `maxHr`, `trimpA`, `trimpB`) are dated documents in `thresholds`, set by `setThresholds.py` from `.env` (one dated entry per run; a new `THRESHOLD_DATE` adds one). Each run uses the latest one on or before its day. None stored → `NoThresholds` → 409.
   - CTL/ATL always start from the first matching run in all history (warm-up), then are sliced to the requested range. Weekly CTL/ATL/TSB are the week's last day's values, up to today.
 - **Week planning:** the `weeks` collection (`date`, `weekTypeId`) is joined with `weekTypes` (`weekTypeId`, `label`: Base/Récupération/Intensive/Spécifique) by `/weekTypes`. It is populated manually through `setWeekData.py`.
