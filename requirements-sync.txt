@@ -1,0 +1,3 @@
+-r requirements.txt
+garminconnect==0.3.20
+garmin-fit-sdk==21.221.0

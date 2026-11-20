@@ -7,6 +7,13 @@ One topic at a time. Move an item to Done when it's committed.
 - [ ] Check the Garmin login on garminconnect 0.3: tokens are now in `ressources/token/garmin_tokens.json`. The old `oauth1_token.json` / `oauth2_token.json` can be deleted once a sync works.
 - [ ] **Security, API exposed on the web**: authentication, CORS limited to the frontend origin, rate limiting, a read-only Mongo user for the API
 
+## Vercel
+
+- [ ] Keep non-web code out of the function bundle: exclude `garmin_sync/`, `scripts/`, `tests/`, `docs/` (`.vercelignore` or `excludeFiles` in `vercel.json`; check which applies to Git deployments)
+- [ ] Faster cold starts: connect to Mongo lazily on the first query and reuse the client; create indexes from a one-off script instead of on every import
+- [ ] Local Python 3.14 venv to match Vercel (production runs 3.14, local runs 3.15)
+- [ ] Optional: `pyproject.toml` as the single dependency file (sync and dev groups) instead of three `requirements*.txt`
+
 ## Later
 
 - [ ] Backfill before 2025 (optional): `python -m scripts.sync_garmin --since 2015-01-01 --until 2024-12-31`
@@ -59,3 +66,4 @@ One topic at a time. Move an item to Done when it's committed.
 - [x] Packages: `jean_cours` (web API) and `garmin_sync` (local), scripts in `scripts/`; `/garmin` route removed
 - [x] Python 3.15 venv; dependencies upgraded (FastAPI 0.162, Starlette 1.10, pydantic 2.14, pymongo 4.19, garminconnect 0.3.20, pytest 9.2, httpx2 2.16); garth and the `dotenv` wrapper dropped
 - [x] Unique indexes always ensured; type hints fixed
+- [x] Vercel entrypoint in `pyproject.toml`, Python 3.14 pinned, web-only `requirements.txt`

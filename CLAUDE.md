@@ -11,7 +11,7 @@ Python backend for running stats. A FastAPI web API, **exposed on the web**, ser
 Use the project virtualenv at `.venv` (Windows layout, Python 3.15). Run everything from the project root. To recreate it: `py -3.15 -m venv .venv`, then install `requirements-dev.txt`. When upgrading, pick versions that support the venv's Python and were released at least two weeks ago; install with `--only-binary=:all:` to catch missing wheels.
 
 ```sh
-.venv/Scripts/python.exe -m pip install -r requirements-dev.txt   # install deps + test deps
+.venv/Scripts/python.exe -m pip install -r requirements-dev.txt   # everything: web + sync + tests + uvicorn
 .venv/Scripts/python.exe -m jean_cours                            # run the API on 0.0.0.0:8000
 .venv/Scripts/python.exe -m uvicorn jean_cours.api.app:app --reload   # run the API with autoreload
 .venv/Scripts/python.exe -m pytest                                # run all tests
@@ -47,6 +47,11 @@ docs/                garmin-activity-fields.md: activity fields with units
 ```
 
 - **Boundary:** `jean_cours/` must never import `garmin_sync`, `garminconnect` or `garmin_fit_sdk`. `tests/test_architecture.py` enforces it. Garmin credentials and tokens are only needed where the sync runs, not on the web server. There is no sync route.
+- **Requirements:** `requirements.txt` is what the web API needs at runtime and is all that Vercel installs, so keep Garmin and dev packages out of it. `requirements-sync.txt` adds the Garmin packages; `requirements-dev.txt` adds uvicorn and the test tools.
+
+## Deployment
+
+Vercel deploys from GitHub `main` (pushing deploys). `pyproject.toml` only sets `[tool.vercel] entrypoint = "jean_cours.api.app:app"`; dependencies come from `requirements.txt`. Vercel offers Python 3.12 (default), 3.13 and 3.14, not 3.15, so `.python-version` pins 3.14. Dependency upgrades must also have wheels for that version (check with `pip install --dry-run --python-version 3.14 --only-binary=:all: --platform manylinux_2_17_x86_64 --implementation cp --target <tmp> -r requirements.txt`). Mongo credentials are Vercel environment variables, not `.env`.
 
 ## Comments
 
